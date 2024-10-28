@@ -13,9 +13,7 @@
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
-    <description>
-        目前仅支持js/java/UpdateNotes.js文件更新versionNum，为防止错误修改，暂不支持选择文件夹，请谨慎执行！
-    </description>
+    <description>Currently, only .js, .java, and UpdateNotes.js files can be used to update the versionNum. To prevent errors, folder selection is not currently supported. Please use with caution!</description>
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
