@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.ttxp"
-version = "1.1-SNAPSHOT"
+version = "2.0-SNAPSHOT"
 
 repositories {
     maven {
@@ -37,8 +37,8 @@ tasks {
     // Set the JVM compatibility versions
 
     patchPluginXml {
-        sinceBuild.set("223.0")
-        untilBuild.set("241.*")
+        sinceBuild.set("242.0")
+        untilBuild.set("242.*")
     }
 
     signPlugin {
