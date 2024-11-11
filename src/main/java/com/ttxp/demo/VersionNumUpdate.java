@@ -3,22 +3,13 @@ package com.ttxp.demo;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
-import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
-import com.intellij.openapi.module.Module;
-import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.project.ProjectManager;
-import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.psi.search.GlobalSearchScope;
 
 import javax.swing.*;
-import javax.swing.text.BadLocationException;
 import java.awt.*;
-import java.awt.event.AdjustmentEvent;
-import java.awt.event.AdjustmentListener;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -26,8 +17,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -46,6 +37,11 @@ import java.util.regex.Pattern;
  * @version V1.0.0
  */
 public class VersionNumUpdate extends AnAction {
+
+    /**
+     * 打印日志
+     */
+    private static final boolean logPrint = false;
 
     @Override
     public void actionPerformed(AnActionEvent e) {
@@ -215,10 +211,11 @@ public class VersionNumUpdate extends AnAction {
                 Project project = e.getProject();
                 if (project != null) {
 
-
-                    System.out.println("姓名：" + userName);
-                    System.out.println("修改描述：" + msg);
-                    System.out.println("任务号：" + taskNo);
+                    if(logPrint){
+                        System.out.println("姓名：" + userName);
+                        System.out.println("修改描述：" + msg);
+                        System.out.println("任务号：" + taskNo);
+                    }
 
                     // 获取缓存管理器实例
                     MyPluginCacheManager setCacheManager = MyPluginCacheManager.getInstance();
@@ -287,7 +284,9 @@ public class VersionNumUpdate extends AnAction {
             if (cachedSetting != null && cachedSetting.length() > 0) {
                 textField4.setText(cachedSetting);
                 // 进行一些操作，比如输出缓存的值
-                System.out.println("Cached setting: " + cachedSetting);
+                if(logPrint){
+                    System.out.println("Cached setting: " + cachedSetting);
+                }
                 textField1.requestFocus();
             }
         }
@@ -378,7 +377,9 @@ public class VersionNumUpdate extends AnAction {
             if (dotIndex > 0 && dotIndex < fileName.length() - 1) {
                 extType = fileName.substring(dotIndex + 1);
                 if (!"java".equalsIgnoreCase(extType) && !"js".equalsIgnoreCase(extType) && !("txt".equalsIgnoreCase(extType) && "UpdateNotes.txt".equalsIgnoreCase(fileName))) {
-                    System.out.println("无效的文件：" + filePath);
+                    if(logPrint){
+                        System.out.println("无效的文件：" + filePath);
+                    }
                     resultObj.setMessage("暂不支持修改该文件");
                     resultObj.setFilePath(filePath);
                     resultObj.setOk(false);
@@ -613,12 +614,18 @@ public class VersionNumUpdate extends AnAction {
                             beforeMsg = beforeMsg + userName + buffer.toString();//" * V5.1.6(20241014) pengtai
                         }
                     } else {
-                        System.out.println("No match found.");
+                        if(logPrint){
+                            System.out.println("No match found.");
+                        }
                     }
                 } else {
-                    System.out.println("No match found.");
+                    if(logPrint){
+                        System.out.println("No match found.");
+                    }
                 }
-                System.out.println("最大版本号：V" + maxVersion + "，所在行：" + maxVersionLineNumber + ", verNum所在行：" + verNumLineNumber);
+                if(logPrint){
+                    System.out.println("最大版本号：V" + maxVersion + "，所在行：" + maxVersionLineNumber + ", verNum所在行：" + verNumLineNumber);
+                }
                 maxVersionNumAndLine.put("maxVersion", maxVersion + "");
                 maxVersionNumAndLine.put("maxVersionLineNumber", maxVersionLineNumber + "");
                 maxVersionNumAndLine.put("verNumLineNumber", verNumLineNumber + "");
@@ -628,14 +635,18 @@ public class VersionNumUpdate extends AnAction {
                 maxVersionNumAndLine.put("vType", vType);
                 maxVersionNumAndLine.put("containsFinal", containsFinal);
             } catch (IOException e) {
-                e.printStackTrace();
+                if(logPrint){
+                    e.printStackTrace();
+                }
                 resultObj.setOk(false);
                 resultObj.setFilePath(filePath);
                 resultObj.setMessage(e.getMessage());
                 return resultObj;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            if(logPrint){
+                e.printStackTrace();
+            }
             resultObj.setOk(false);
             resultObj.setFilePath(filePath);
             resultObj.setMessage(e.getMessage());
@@ -751,7 +762,9 @@ public class VersionNumUpdate extends AnAction {
             try {
                 totalLines = countLinesInFile(filePath);
             } catch (IOException e) {
-                e.printStackTrace();
+                if(logPrint){
+                    e.printStackTrace();
+                }
                 resultObj.setOk(false);
                 resultObj.setFilePath(filePath);
                 resultObj.setMessage(e.getMessage());
@@ -783,7 +796,9 @@ public class VersionNumUpdate extends AnAction {
 
 
             } catch (IOException e) {
-                e.printStackTrace();
+                if(logPrint){
+                    e.printStackTrace();
+                }
                 resultObj.setOk(false);
                 resultObj.setFilePath(filePath);
                 resultObj.setMessage(e.getMessage());
@@ -794,14 +809,18 @@ public class VersionNumUpdate extends AnAction {
             try {
                 renameFile("temp_file.txt", filePath);
             } catch (IOException e) {
-                e.printStackTrace();
+                if(logPrint){
+                    e.printStackTrace();
+                }
                 resultObj.setOk(false);
                 resultObj.setFilePath(filePath);
                 resultObj.setMessage(e.getMessage());
                 return resultObj;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            if(logPrint){
+                e.printStackTrace();
+            }
             resultObj.setOk(false);
             resultObj.setFilePath(filePath);
             resultObj.setMessage(e.getMessage());
