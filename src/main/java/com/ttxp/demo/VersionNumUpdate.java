@@ -3,22 +3,13 @@ package com.ttxp.demo;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
-import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
-import com.intellij.openapi.module.Module;
-import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.project.ProjectManager;
-import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.psi.search.GlobalSearchScope;
 
 import javax.swing.*;
-import javax.swing.text.BadLocationException;
 import java.awt.*;
-import java.awt.event.AdjustmentEvent;
-import java.awt.event.AdjustmentListener;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -26,8 +17,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -46,6 +37,11 @@ import java.util.regex.Pattern;
  * @version V1.0.0
  */
 public class VersionNumUpdate extends AnAction {
+
+    /**
+     * 打印日志
+     */
+    private static final boolean logPrint = false;
 
     @Override
     public void actionPerformed(AnActionEvent e) {
@@ -78,26 +74,28 @@ public class VersionNumUpdate extends AnAction {
      */
     private void showDialog(AnActionEvent e, VirtualFile[] files) {
 
-
+        // 二级框
         JFrame frame = new JFrame("更新VersionNum");
         frame.setSize(800, 300);
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.setLayout(new BorderLayout());
 
+        // 姓名、修改描述、任务号
         JPanel topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
 
+        // 姓名
         JPanel topPanelName = new JPanel(new GridBagLayout());
         JLabel label4 = new JLabel("姓名：");
         label4.setPreferredSize(new Dimension(80, 30));
         JTextField textField4 = new JTextField();
-
         topPanelName.add(label4);
         GridBagConstraints c4 = new GridBagConstraints();
         c4.fill = GridBagConstraints.HORIZONTAL;
         c4.weightx = 1.0;
         topPanelName.add(textField4, c4);
 
+        // 修改描述
         JPanel topPanelMsg = new JPanel(new GridBagLayout());
         JLabel label1 = new JLabel("修改描述：");
         label1.setPreferredSize(new Dimension(80, 30));
@@ -108,7 +106,7 @@ public class VersionNumUpdate extends AnAction {
         c1.weightx = 1.0;
         topPanelMsg.add(textField1, c1);
 
-
+        // 任务号
         JPanel topPanelTaskNo = new JPanel(new GridBagLayout());
         JLabel label2 = new JLabel("任务/客服 ：");
         label2.setPreferredSize(new Dimension(80, 30));
@@ -122,18 +120,17 @@ public class VersionNumUpdate extends AnAction {
         // 单选框
         JPanel panel = new JPanel();
         panel.setLayout(new GridBagLayout());
-
         JPanel leftPanel = new JPanel();
         leftPanel.setLayout(new GridBagLayout());
         JRadioButton radioButton1 = new JRadioButton("任务");
         radioButton1.setSelected(true);
         leftPanel.add(radioButton1);
-
         JPanel rightPanel = new JPanel();
         rightPanel.setLayout(new GridBagLayout());
         JRadioButton radioButton2 = new JRadioButton("客服");
         rightPanel.add(radioButton2);
 
+        // 设置单选框位置
         GridBagConstraints left = new GridBagConstraints();
         left.gridx = 0;
         left.weightx = 0.5;
@@ -163,17 +160,18 @@ public class VersionNumUpdate extends AnAction {
         });
 
 
+        // 修改文件展示框
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
         JLabel label3 = new JLabel("修改文件：");
         centerPanel.add(label3);
-
         JTextArea descriptionArea = new JTextArea(15, 130);
         descriptionArea.setEditable(false);
         descriptionArea.setText(filesDirs.toString());
         descriptionArea.setCaretPosition(1);
         JScrollPane scrollPane = new JScrollPane(descriptionArea);
 
+        // 底部按钮（确认、取消）
         JPanel bottomPanel = new JPanel();
         JButton confirmButton = new JButton("确认");
         JButton cancelButton = new JButton("取消");
@@ -213,20 +211,20 @@ public class VersionNumUpdate extends AnAction {
                 Project project = e.getProject();
                 if (project != null) {
 
-
-                    System.out.println("姓名：" + userName);
-                    System.out.println("修改描述：" + msg);
-                    System.out.println("任务号：" + taskNo);
+                    if(logPrint){
+                        System.out.println("姓名：" + userName);
+                        System.out.println("修改描述：" + msg);
+                        System.out.println("任务号：" + taskNo);
+                    }
 
                     // 获取缓存管理器实例
-                    // 弃用
                     MyPluginCacheManager setCacheManager = MyPluginCacheManager.getInstance();
                     if (setCacheManager != null) {
                         // 设置缓存的值
                         setCacheManager.setCachedFormValue(userName);
                     }
 
-
+                    // 循环所有文件依次处理
                     List<ResultObj> resultList = new ArrayList<>();
                     Arrays.stream(files).forEach(file -> {
                         String path = file.getPath();
@@ -244,6 +242,7 @@ public class VersionNumUpdate extends AnAction {
                         file.refresh(false, false);
                     });
 
+                    // 判断是否有报错返回展示对应信息
                     if (resultList != null && resultList.size() > 0) {
                         showMessageDialog(e, resultList, files);
                     } else {
@@ -268,7 +267,6 @@ public class VersionNumUpdate extends AnAction {
         frame.add(middleContainerPanel);
         //确认、取消确认按钮
         frame.add(bottomPanel, BorderLayout.SOUTH);
-
         frame.pack();
 
         // 将窗口显示在屏幕中央
@@ -285,9 +283,10 @@ public class VersionNumUpdate extends AnAction {
             // 获取缓存的值
             if (cachedSetting != null && cachedSetting.length() > 0) {
                 textField4.setText(cachedSetting);
-//                textField4.setFocusable(false);
                 // 进行一些操作，比如输出缓存的值
-                System.out.println("Cached setting: " + cachedSetting);
+                if(logPrint){
+                    System.out.println("Cached setting: " + cachedSetting);
+                }
                 textField1.requestFocus();
             }
         }
@@ -370,13 +369,17 @@ public class VersionNumUpdate extends AnAction {
             File file = new File(filePath);
             //获取文件扩展类型
             String extType;
+            // 区分不同的versionNum (1 = VXXX(XXXXXXXX)/ 2 = VX.X.X(XXXXXXXX)/ 3 = XXXXXXXX)
             String vType = "";
+            // 文件名
             String fileName = file.getName();
             int dotIndex = fileName.lastIndexOf('.');
             if (dotIndex > 0 && dotIndex < fileName.length() - 1) {
                 extType = fileName.substring(dotIndex + 1);
                 if (!"java".equalsIgnoreCase(extType) && !"js".equalsIgnoreCase(extType) && !("txt".equalsIgnoreCase(extType) && "UpdateNotes.txt".equalsIgnoreCase(fileName))) {
-                    System.out.println("无效的文件：" + filePath);
+                    if(logPrint){
+                        System.out.println("无效的文件：" + filePath);
+                    }
                     resultObj.setMessage("暂不支持修改该文件");
                     resultObj.setFilePath(filePath);
                     resultObj.setOk(false);
@@ -390,8 +393,11 @@ public class VersionNumUpdate extends AnAction {
             }
             try (InputStreamReader isr = new InputStreamReader(new FileInputStream(filePath), StandardCharsets.UTF_8);
                  BufferedReader reader = new BufferedReader(isr)) {
+                // VXXX(XXXXXXXX)
                 String parttenStr1 = "V(\\d+)\\((\\d+)\\)";
+                // VX.X.X(XXXXXXXX)
                 String parttenStr2 = "V\\d+(\\.\\d+){1,3}\\((\\d+)\\)";
+                // XXXXXXXX
                 String parttenStr3 = "(\\d+)";
 
                 Pattern partten1 = Pattern.compile(parttenStr1);
@@ -400,9 +406,13 @@ public class VersionNumUpdate extends AnAction {
 
                 int maxVersion = 0;
                 int lineNumber = 0;
+                // VXXX(XXXXXXXX)所在行 行号
                 int maxVersionLineNumber = 0;
+                // String verNum所在行
                 int verNumLineNumber = 0;
+                // VXXX(XXXXXXXX)所在行数据
                 String maxVersionLineStr = "";
+                // String verNum所在行是否包含final
                 String containsFinal = "";
                 // 中间符
                 String versionNum = "";
@@ -604,12 +614,18 @@ public class VersionNumUpdate extends AnAction {
                             beforeMsg = beforeMsg + userName + buffer.toString();//" * V5.1.6(20241014) pengtai
                         }
                     } else {
-                        System.out.println("No match found.");
+                        if(logPrint){
+                            System.out.println("No match found.");
+                        }
                     }
                 } else {
-                    System.out.println("No match found.");
+                    if(logPrint){
+                        System.out.println("No match found.");
+                    }
                 }
-                System.out.println("最大版本号：V" + maxVersion + "，所在行：" + maxVersionLineNumber + ", verNum所在行：" + verNumLineNumber);
+                if(logPrint){
+                    System.out.println("最大版本号：V" + maxVersion + "，所在行：" + maxVersionLineNumber + ", verNum所在行：" + verNumLineNumber);
+                }
                 maxVersionNumAndLine.put("maxVersion", maxVersion + "");
                 maxVersionNumAndLine.put("maxVersionLineNumber", maxVersionLineNumber + "");
                 maxVersionNumAndLine.put("verNumLineNumber", verNumLineNumber + "");
@@ -619,14 +635,18 @@ public class VersionNumUpdate extends AnAction {
                 maxVersionNumAndLine.put("vType", vType);
                 maxVersionNumAndLine.put("containsFinal", containsFinal);
             } catch (IOException e) {
-                e.printStackTrace();
+                if(logPrint){
+                    e.printStackTrace();
+                }
                 resultObj.setOk(false);
                 resultObj.setFilePath(filePath);
                 resultObj.setMessage(e.getMessage());
                 return resultObj;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            if(logPrint){
+                e.printStackTrace();
+            }
             resultObj.setOk(false);
             resultObj.setFilePath(filePath);
             resultObj.setMessage(e.getMessage());
@@ -742,7 +762,9 @@ public class VersionNumUpdate extends AnAction {
             try {
                 totalLines = countLinesInFile(filePath);
             } catch (IOException e) {
-                e.printStackTrace();
+                if(logPrint){
+                    e.printStackTrace();
+                }
                 resultObj.setOk(false);
                 resultObj.setFilePath(filePath);
                 resultObj.setMessage(e.getMessage());
@@ -774,7 +796,9 @@ public class VersionNumUpdate extends AnAction {
 
 
             } catch (IOException e) {
-                e.printStackTrace();
+                if(logPrint){
+                    e.printStackTrace();
+                }
                 resultObj.setOk(false);
                 resultObj.setFilePath(filePath);
                 resultObj.setMessage(e.getMessage());
@@ -785,14 +809,18 @@ public class VersionNumUpdate extends AnAction {
             try {
                 renameFile("temp_file.txt", filePath);
             } catch (IOException e) {
-                e.printStackTrace();
+                if(logPrint){
+                    e.printStackTrace();
+                }
                 resultObj.setOk(false);
                 resultObj.setFilePath(filePath);
                 resultObj.setMessage(e.getMessage());
                 return resultObj;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            if(logPrint){
+                e.printStackTrace();
+            }
             resultObj.setOk(false);
             resultObj.setFilePath(filePath);
             resultObj.setMessage(e.getMessage());
