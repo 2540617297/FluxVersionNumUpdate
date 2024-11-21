@@ -6,18 +6,20 @@ import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
+
 @State(
         name = "MyPluginCacheManager",
         storages = {@Storage("myplugin_cache.xml")}
 )
 public class MyPluginCacheManager implements PersistentStateComponent<MyPluginCacheManager> {
-    private String cachedFormValue;
+    private Map<String,String> cachedFormValue;
 
-    public String getCachedFormValue() {
+    public Map<String,String> getCachedFormValue() {
         return cachedFormValue;
     }
 
-    public void setCachedFormValue(String value) {
+    public void setCachedFormValue(Map<String,String> value) {
         cachedFormValue = value;
     }
 
