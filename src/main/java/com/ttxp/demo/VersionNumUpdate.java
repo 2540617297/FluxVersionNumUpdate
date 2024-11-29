@@ -396,14 +396,14 @@ public class VersionNumUpdate extends AnAction {
                                 hasErr.set(true);
                                 resultList.add(resultObj);
                                 failFileNum.set(failFileNum.get() + 1);
-                                return;
+                                continue;
                             }
                             ResultObj resultObj1 = insertNewVersionByNewFile(filePath, maxVersionNumAndLine, msg, taskNo, taskType);
                             if (!resultObj1.isOk()) {
                                 hasErr.set(true);
                                 resultList.add(resultObj1);
                                 failFileNum.set(failFileNum.get() + 1);
-                                return;
+                                continue;
                             } else {
                                 resultList.add(resultObj1);
                                 successFileNum.set(successFileNum.get() + 1);
