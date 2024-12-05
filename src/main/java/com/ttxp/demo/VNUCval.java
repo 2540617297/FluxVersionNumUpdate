@@ -143,6 +143,7 @@ public class VNUCval {
     public static final String MSG_ADMIN_MAXVERNUM = "未识别出最大版本号";
     public static final String MSG_ADMIN_MAXVERLINENUM = "未找到最大版本号所在行";
     public static final String MSG_ADMIN_VERNUMGEN = "verNum生成失败，请联系管理员检查！";
+    public static final String MSG_ADMIN_PRIERR = "权限符识别失败，请检查（protected/public/private）！";
     public static final String MSG_ADMIN_ERRVERNUM = "检测出String verNum所在行小于或等于增加updateNotes注释行，请检查！";
     public static final String MSG_ADMIN_BEFOREGEN = "beforeMsg识别出错，请联系管理员！";
 }

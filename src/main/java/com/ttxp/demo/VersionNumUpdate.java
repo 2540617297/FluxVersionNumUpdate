@@ -289,7 +289,7 @@ public class VersionNumUpdate extends AnAction {
             }
 
             // 显示表单对话框
-            int result = JOptionPane.showConfirmDialog(null, (updateItem.isSelected() ? MSG_CONFIRM_UPDATE+"\n" : "") + MSG_CONFIRM, "Confirmation", JOptionPane.OK_CANCEL_OPTION);
+            int result = JOptionPane.showConfirmDialog(null, (updateItem.isSelected() ? MSG_CONFIRM_UPDATE + "\n" : "") + MSG_CONFIRM, "Confirmation", JOptionPane.OK_CANCEL_OPTION);
             if (result == JOptionPane.OK_OPTION) {
                 // 用户点击了确认按钮，执行实际的操作
                 Project project = e.getProject();
@@ -638,6 +638,7 @@ public class VersionNumUpdate extends AnAction {
                 String maxVersionLineStr = "";
                 // String verNum所在行是否包含final
                 String containsFinal = "";
+                String priStr = "";
                 // 中间符
                 String versionNum = "";
                 String beforeMsg = "";
@@ -648,12 +649,26 @@ public class VersionNumUpdate extends AnAction {
                     Matcher matcher2 = partten2.matcher(line);
                     Matcher matcher3 = partten3.matcher(line);
                     boolean find = false;
-                    if (line.contains("String verNum ") && line.trim().startsWith("private") && line.contains("private static")) {
+
+                    // public static final String verNum
+                    // private static final String verNum
+                    if (line.contains("String verNum ") &&
+                            ((line.trim().startsWith("private") && line.contains("private static"))
+                                    || (line.trim().startsWith("public") && line.contains("public static"))
+                                    || (line.trim().startsWith("protected") && line.contains("protected static"))
+                            )) {
                         verNumLineNumber = lineNumber;
                         if (line.contains("final")) {
                             containsFinal = "Y";
                         } else {
                             containsFinal = "N";
+                        }
+                        String[] priKeys = {"private", "public", "protected"};
+                        for (String priKey : priKeys) {
+                            if (line.trim().startsWith(priKey)) {
+                                priStr = priKey;
+                                break;
+                            }
                         }
                     } else if (matcher1.find()) {
                         find = true;
@@ -681,7 +696,10 @@ public class VersionNumUpdate extends AnAction {
 
                     }
 
-                    if ((line.contains("String verNum ") && line.trim().startsWith("private") && line.contains("private static")) || line.contains("@Autowired") || line.contains("define")
+                    if ((line.contains("String verNum ") && ((line.trim().startsWith("private") && line.contains("private static"))
+                            || (line.trim().startsWith("public") && line.contains("public static"))
+                            || (line.trim().startsWith("protected") && line.contains("protected static"))))
+                            || line.contains("@Autowired") || line.contains("define")
                             || ("3".equals(vType) && find)) {
                         break;
                     }
@@ -853,6 +871,7 @@ public class VersionNumUpdate extends AnAction {
                 maxVersionNumAndLine.put("versionNum", versionNum);
                 maxVersionNumAndLine.put("vType", vType);
                 maxVersionNumAndLine.put("containsFinal", containsFinal);
+                maxVersionNumAndLine.put("priStr", priStr);
             } catch (IOException e) {
                 if (logPrint) {
                     e.printStackTrace();
@@ -952,6 +971,14 @@ public class VersionNumUpdate extends AnAction {
                 resultObj.setOk(false);
                 return resultObj;
             }
+            String priStr = maxVersionNumAndLine.get("priStr");
+            if ("java".equalsIgnoreCase(extType) && (priStr == null || priStr.length() <= 0)) {
+                // 权限符识别失败，请检查（protected/public/private）！
+                resultObj.setMessage(MSG_ADMIN_PRIERR);
+                resultObj.setFilePath(filePath);
+                resultObj.setOk(false);
+                return resultObj;
+            }
 
             // versionNum类型 VXXX-》1、VX.X.X-》2
             String vType = maxVersionNumAndLine.get("vType");
@@ -981,11 +1008,8 @@ public class VersionNumUpdate extends AnAction {
             // 是否包含final
             String containsFinal = maxVersionNumAndLine.get("containsFinal");
             String verNumNewLine = "";
-            if ("Y".equals(containsFinal)) {
-                verNumNewLine = "    private static final String verNum = \"" + versionNum + "\";// 版本号";
-            } else {
-                verNumNewLine = "    private static String verNum = \"" + versionNum + "\";// 版本号";
-            }
+            String finalStr = "Y".equals(containsFinal) ? " final" : "";
+            verNumNewLine = "    " + priStr + " static" + finalStr + " String verNum = \"" + versionNum + "\";// 版本号";
 
             int totalLines = 0;
             try {
