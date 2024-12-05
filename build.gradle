@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.ttxp"
-version = "2.0-SNAPSHOT"
+version = "2.2.2-SNAPSHOT"
 
 repositories {
     maven {
@@ -38,7 +38,7 @@ tasks {
 
     patchPluginXml {
         sinceBuild.set("242.0")
-        untilBuild.set("242.*")
+        untilBuild.set("243.*")
     }
 
     signPlugin {
