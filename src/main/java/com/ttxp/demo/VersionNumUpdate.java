@@ -11,6 +11,8 @@ import com.intellij.openapi.vfs.VirtualFile;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -46,7 +48,7 @@ public class VersionNumUpdate extends AnAction {
     /**
      * 打印日志
      */
-    private static final boolean logPrint = false;
+    private static final boolean logPrint = true;
 
     @Override
     public void actionPerformed(AnActionEvent e) {
@@ -62,6 +64,18 @@ public class VersionNumUpdate extends AnAction {
         if (files == null) {
             Messages.showMessageDialog(e.getProject(), MSG_NOCHECKED, MSG_MESSGE, Messages.getInformationIcon());
             return;
+        } else {
+            // 判断是否全为文件夹
+            boolean isAllDictory = true;
+            for (VirtualFile file : files) {
+                if (!file.isDirectory()) {
+                    isAllDictory = false;
+                }
+            }
+            if (isAllDictory) {
+                Messages.showMessageDialog(e.getProject(), MSG_ALLDIRECTORY, MSG_MESSGE, Messages.getInformationIcon());
+                return;
+            }
         }
 
         FileDocumentManager.getInstance().saveAllDocuments();
@@ -94,8 +108,10 @@ public class VersionNumUpdate extends AnAction {
         JMenu fileMenu = new JMenu(F_SETTINGS_K_L);
         JMenuItem updateItem = new JMenuItem(S_UPDATE_ITEM_F_L);
         JMenuItem cacheItem = new JMenuItem(S_CACHE_ITEM_F_L);
+        JMenuItem copyItem = new JMenuItem(S_CACHE_COPYNOTES_F_L);
         fileMenu.add(updateItem);
         fileMenu.add(cacheItem);
+        fileMenu.add(copyItem);
         // 将文件菜单和帮助菜单添加到菜单栏
         menuBar.add(fileMenu);
         // 将菜单栏添加到JFrame
@@ -151,6 +167,32 @@ public class VersionNumUpdate extends AnAction {
                     cachedFormValue.put(S_CACHE_KEY, "Y");
                 } else {
                     cachedFormValue.put(S_CACHE_KEY, "N");
+                }
+                setCacheManager.setCachedFormValue(cachedFormValue);
+            }
+        });
+        copyItem.addActionListener(e14 -> {
+            // 切换菜单项的勾选状态
+            copyItem.setSelected(!copyItem.isSelected());
+            if (copyItem.isSelected()) {
+                copyItem.setText(S_CACHE_COPYNOTES_S_L);
+            } else {
+                copyItem.setText(S_CACHE_COPYNOTES_F_L);
+            }
+            printLog("copyItem是否被勾选: " + updateItem.isSelected());
+
+            // 获取缓存管理器实例
+            MyPluginCacheManager setCacheManager = MyPluginCacheManager.getInstance();
+            if (setCacheManager != null) {
+                // 设置缓存的值
+                Map<String, String> cachedFormValue = setCacheManager.getCachedFormValue();
+                if (cachedFormValue == null || cachedFormValue.size() == 0) {
+                    cachedFormValue = new HashMap<>();
+                }
+                if (copyItem.isSelected()) {
+                    cachedFormValue.put(S_COPY_KEY, "Y");
+                } else {
+                    cachedFormValue.put(S_COPY_KEY, "N");
                 }
                 setCacheManager.setCachedFormValue(cachedFormValue);
             }
@@ -231,9 +273,22 @@ public class VersionNumUpdate extends AnAction {
 
         // 说明框
         StringBuffer filesDirs = new StringBuffer();
-        filesDirs.append(F_FILESNUM_K_L + files.length + "\n");
         HashSet<String> containsUpdateNotes = new HashSet<>();
+        AtomicInteger dictoryFileNum = new AtomicInteger();
+        AtomicInteger FileNum = new AtomicInteger();
         Arrays.stream(files).forEach(file -> {
+            if (file.isDirectory()) {
+                dictoryFileNum.set(dictoryFileNum.get() + 1);
+            } else {
+                FileNum.set(FileNum.get() + 1);
+            }
+        });
+        filesDirs.append(F_FILESNUM_K_L + files.length + "," + F_DIRECTORY_K_L + dictoryFileNum.get() + "," + F_FILE_K_L + FileNum.get() + "\n");
+        // 遍历文件数组
+        Arrays.stream(files).forEach(file -> {
+            if (file.isDirectory()) {
+                return;
+            }
             String path = file.getPath();
             if (path.contains("UpdateNotes.txt")) {
                 containsUpdateNotes.add(path);
@@ -323,11 +378,9 @@ public class VersionNumUpdate extends AnAction {
                         String path = file.getPath();
                         if (file.isDirectory()) {
                             ResultObj resultObj = new ResultObj();
-                            resultObj.setOk(false);
+                            resultObj.setOk(true);
                             resultObj.setFilePath(path);
-                            resultObj.setMessage(MSG_ISDISTORY);
-                            failFileNum.set(failFileNum.get() + 1);
-                            hasErr.set(true);
+                            successFileNum.set(successFileNum.get() + 1);
                             resultList.add(resultObj);
                             return;
                         }
@@ -352,29 +405,51 @@ public class VersionNumUpdate extends AnAction {
                         file.refresh(false, false);
                     });
 
+
+                    if (copyItem.isSelected()) {
+                        for (ResultObj resultObj : resultList) {
+                            if (resultObj.isOk()) {
+                                // 获取系统剪贴板实例
+                                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                                // 要复制到剪贴板的文本内容
+                                String textToCopy = msg + "," + taskType + "：" + taskNo;
+                                // 创建一个StringSelection对象，用于包装要复制的字符串
+                                StringSelection selection = new StringSelection(textToCopy);
+                                // 将包装好的内容设置到剪贴板中
+                                clipboard.setContents(selection, null);
+                                break;
+                            }
+                        }
+                    }
+
                     // 判断是否需要同步更新updateNotes
                     if (updateItem.isSelected()) {
-                        HashSet<String> dictorys = new HashSet<>();
+                        HashSet<String> directorys = new HashSet<>();
                         for (ResultObj resultObj : resultList) {
                             if (resultObj.isOk()) {
                                 String filePath = resultObj.getFilePath();
-                                String[] pattern = {"/src/main/webapp/", "/src/main/resources/", "/src/main/java/"};
-                                String projectPath = "";
-                                for (String s : pattern) {
-                                    int i = filePath.indexOf(s);
-                                    if (i != -1) {
-                                        projectPath = filePath.substring(0, i);
+                                if (filePath != null && filePath.length() > 0) {
+                                    String[] pattern = {"/src/main/webapp/", "/src/main/resources/", "/src/main/java/"};
+                                    String projectPath = "";
+                                    for (String s : pattern) {
+                                        int i = filePath.indexOf(s);
+                                        if (i != -1) {
+                                            projectPath = filePath.substring(0, i);
+                                        }
+                                    }
+                                    if (projectPath != null && projectPath.length() > 0) {
+                                        directorys.add(projectPath + "/src/main/resources/updatenotes/UpdateNotes.txt");
                                     }
                                 }
-                                dictorys.add(projectPath + "/src/main/resources/updatenotes/UpdateNotes.txt");
+
                             }
                         }
-                        printLog("search updateNotes dictory:" + dictorys.toString());
+                        printLog("search updateNotes dictory:" + directorys.toString());
                         printLog("updateNotes dictory:" + containsUpdateNotes.toString());
 
                         // 去重
-                        HashSet<String> distinctDictorys = new HashSet<>();
-                        for (String dictory : dictorys) {
+                        HashSet<String> distinctDirectorys = new HashSet<>();
+                        for (String dictory : directorys) {
                             boolean contains = false;
                             for (String containsUpdateNote : containsUpdateNotes) {
                                 if (containsUpdateNote.equals(dictory)) {
@@ -383,13 +458,13 @@ public class VersionNumUpdate extends AnAction {
                                 }
                             }
                             if (!contains) {
-                                distinctDictorys.add(dictory);
+                                distinctDirectorys.add(dictory);
                             }
                         }
-                        printLog("distinct updateNotes dictory:" + distinctDictorys.toString());
+                        printLog("distinct updateNotes dictory:" + distinctDirectorys.toString());
 
                         // 更新UpdateNotes
-                        for (String filePath : distinctDictorys) {
+                        for (String filePath : distinctDirectorys) {
                             Map<String, String> maxVersionNumAndLine = new HashMap<>();
                             ResultObj resultObj = getMaxVersionNum(filePath, userName, maxVersionNumAndLine);
                             if (!resultObj.isOk()) {
@@ -418,7 +493,7 @@ public class VersionNumUpdate extends AnAction {
 
                     // 判断是否有报错返回展示对应信息
                     if (hasErr.get()) {
-                        showMessageDialog(e, resultList, successFileNum.get(), failFileNum.get());
+                        showMessageDialog(e, resultList, successFileNum.get(), failFileNum.get(), dictoryFileNum.get());
                     } else {
                         Messages.showInfoMessage(MSG_SUCCESS, MSG_MESSGE);
                     }
@@ -450,7 +525,6 @@ public class VersionNumUpdate extends AnAction {
         frame.setLocation(x, y);
 
         // 获取缓存管理器实例
-        // 临时存储使用，当关闭IDEA后存储数据会清空，此方法弃用
         MyPluginCacheManager cacheManager = MyPluginCacheManager.getInstance();
         if (cacheManager != null) {
             Map<String, String> cachedSetting = cacheManager.getCachedFormValue();
@@ -514,6 +588,21 @@ public class VersionNumUpdate extends AnAction {
                     cacheItem.setSelected(false);
                     cacheItem.setText(S_CACHE_ITEM_F_L);
                 }
+
+                String copy = cachedSetting.get(S_COPY_KEY);
+                if (copy != null && copy.length() > 0) {
+                    if ("Y".equals(copy)) {
+                        copyItem.setSelected(true);
+                        copyItem.setText(S_CACHE_COPYNOTES_S_L);
+                    } else {
+                        copyItem.setSelected(false);
+                        copyItem.setText(S_CACHE_COPYNOTES_F_L);
+                    }
+                } else {
+                    copyItem.setSelected(false);
+                    copyItem.setText(S_CACHE_COPYNOTES_F_L);
+                }
+
             }
         }
 
@@ -529,7 +618,7 @@ public class VersionNumUpdate extends AnAction {
      * @param e
      * @param resultObjList
      */
-    private void showMessageDialog(AnActionEvent e, List<ResultObj> resultObjList, int successNum, int failFileNum) {
+    private void showMessageDialog(AnActionEvent e, List<ResultObj> resultObjList, int successNum, int failFileNum, int directoryFileNum) {
         JFrame frame = new JFrame("错误信息");
         frame.setSize(900, 800);
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -537,7 +626,7 @@ public class VersionNumUpdate extends AnAction {
 
         // 说明框
         StringBuffer messages = new StringBuffer();
-        messages.append(MSG_SUCCESSFILENUM + successNum + "," + MSG_FAILFILENUM + failFileNum + "\n");
+        messages.append(MSG_SUCCESSFILENUM + successNum + "," + F_DIRECTORY_K_L + directoryFileNum + "," + MSG_FAILFILENUM + failFileNum + "\n");
         for (ResultObj resultObj : resultObjList) {
             if (!resultObj.isOk()) {
                 messages.append(resultObj.getFilePath()).append(":\n").append(resultObj.getMessage()).append("\n");
