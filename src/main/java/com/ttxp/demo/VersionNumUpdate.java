@@ -1227,7 +1227,7 @@ public class VersionNumUpdate extends AnAction {
             if (i == -1) {
                 return;
             }
-            indexs.add(i);
+            indexs.add(Integer.valueOf(i));
             getJsSplitIndex(jsGroup, indexs, i + 1);
         }
     }
