@@ -48,7 +48,7 @@ public class VersionNumUpdate extends AnAction {
     /**
      * 打印日志
      */
-    private static final boolean logPrint = true;
+    private static final boolean logPrint = false;
 
     @Override
     public void actionPerformed(AnActionEvent e) {
@@ -788,7 +788,7 @@ public class VersionNumUpdate extends AnAction {
                     if ((line.contains("String verNum ") && ((line.trim().startsWith("private") && line.contains("private static"))
                             || (line.trim().startsWith("public") && line.contains("public static"))
                             || (line.trim().startsWith("protected") && line.contains("protected static"))))
-                            || line.contains("@Autowired") || line.contains("define")
+                            || line.contains("@Autowired") || (line.contains("define") && !line.contains("defined"))
                             || ("3".equals(vType) && find)) {
                         break;
                     }

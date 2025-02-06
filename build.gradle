@@ -4,16 +4,16 @@ plugins {
 }
 
 group = "com.ttxp"
-version = "1.2.2-SNAPSHOT"
+version = "1.2.5-SNAPSHOT"
 
 repositories {
+    mavenCentral()
     maven {
         url 'https://maven.aliyun.com/repository/public/'
     }
     maven {
         url 'https://maven.aliyun.com/repository/central'
     }
-    mavenCentral()
 }
 
 // Configure Gradle IntelliJ Plugin
