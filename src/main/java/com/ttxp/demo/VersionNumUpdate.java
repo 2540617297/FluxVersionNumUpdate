@@ -13,6 +13,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
+import java.awt.event.ActionEvent;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -213,6 +216,7 @@ public class VersionNumUpdate extends AnAction {
         c4.weightx = 1.0;
         topPanelName.add(textField4, c4);
 
+
         // 修改描述
         JPanel topPanelMsg = new JPanel(new GridBagLayout());
         JLabel label1 = new JLabel(F_UPDATEMSG_K_L);
@@ -223,6 +227,8 @@ public class VersionNumUpdate extends AnAction {
         c1.fill = GridBagConstraints.HORIZONTAL;
         c1.weightx = 1.0;
         topPanelMsg.add(textField1, c1);
+
+
 
         // 任务号
         JPanel topPanelTaskNo = new JPanel(new GridBagLayout());
@@ -270,6 +276,47 @@ public class VersionNumUpdate extends AnAction {
         topPanel.add(topPanelMsg);
         topPanel.add(topPanelTaskNo);
         topPanel.add(panel, BorderLayout.CENTER);
+
+        // 创建并添加 FocusListener
+        textField1.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e1) {
+                return;
+            }
+
+            @Override
+            public void focusLost(FocusEvent e2) {
+                // 当 JTextField 失去焦点时触发
+                // 这里可以添加你自己的逻辑，比如验证输入内容
+                String text = textField1.getText();
+                boolean success = false;
+                if (text != null && !text.isEmpty()) {
+                    printLog(text);
+                    String[] keys = {"任务：", "客服：","任务:", "客服:"};
+                    for (String key : keys) {
+                        if (text.contains(key)) {
+                            int index = text.indexOf(key);
+                            String taskMsg = text.substring(0, index);
+                            if(taskMsg.endsWith(",") || taskMsg.endsWith("，")){
+                                taskMsg = taskMsg.substring(0, taskMsg.length() - 1);
+                            }
+                            textField1.setText(taskMsg);
+                            textField2.setText(text.substring(index + 3));
+                            if (key.contains("任务")) {
+                                radioButton1.setSelected(true);
+                            } else {
+                                radioButton2.setSelected(true);
+                            }
+                            success = true;
+                            break;
+                        }
+                    }
+                    if(success){
+                        Messages.showInfoMessage(MSG_SPLITTASKMSG+"《"+text+"》", MSG_MESSGE);
+                    }
+                }
+            }
+        });
 
         // 说明框
         StringBuffer filesDirs = new StringBuffer();
@@ -517,6 +564,7 @@ public class VersionNumUpdate extends AnAction {
         //确认、取消确认按钮
         frame.add(bottomPanel, BorderLayout.SOUTH);
         frame.pack();
+
 
         // 将窗口显示在屏幕中央
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();

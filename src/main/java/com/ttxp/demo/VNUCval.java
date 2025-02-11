@@ -173,6 +173,7 @@ public class VNUCval {
     public static final String MSG_208NOTSUPPORT = "暂不支持修改该文件";
     public static final String MSG_NOSTRINGNUM = "未定位到String verNum信息请检查！";
     public static final String MSG_NOVERSIONNUM = "未定位到版本号信息";
+    public static final String MSG_SPLITTASKMSG = "已自动识别:\n";
     public static final String MSG_ADMIN_MAXVERNUM = "未识别出最大版本号";
     public static final String MSG_ADMIN_MAXVERLINENUM = "未找到最大版本号所在行";
     public static final String MSG_ADMIN_VERNUMGEN = "verNum生成失败，请联系管理员检查！";
