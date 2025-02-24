@@ -1,35 +1,25 @@
 package com.ttxp.demo;
 
-import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtilCore;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.roots.ModuleRootModel;
-import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vcs.FilePath;
 import com.intellij.openapi.vcs.VcsDataKeys;
 import com.intellij.openapi.vcs.changes.Change;
-import com.intellij.openapi.vcs.changes.ChangeListManager;
-import com.intellij.openapi.vcs.changes.ChangesUtil;
 import com.intellij.openapi.vcs.changes.ContentRevision;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.ui.components.JBList;
 
-import javax.swing.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * idea - commit界面右键
@@ -43,9 +33,7 @@ import java.util.stream.Collectors;
  * <p>
  *
  * @author wangjia
- *
  * @version V1.0.0
- *
  */
 public class VNUCommitAction extends AnAction {
 
@@ -68,7 +56,7 @@ public class VNUCommitAction extends AnAction {
         LocalFileSystem localFileSystem = LocalFileSystem.getInstance();
 
         // 获取当前事件的变更列表
-        Change[] changes = (Change[]) event.getData(VcsDataKeys.CHANGES);
+        Change[] changes = (Change[])event.getData(VcsDataKeys.CHANGES);
 
         // 遍历每个变更
         for (Change change : changes) {
@@ -177,9 +165,9 @@ public class VNUCommitAction extends AnAction {
         // 保存所有文档
         FileDocumentManager.getInstance().saveAllDocuments();
         // 创建版本号更新对象
-        VersionNumUpdate versionNumUpdate = new VersionNumUpdate();
+        VNUGUI handleFile = new VNUGUI();
         // 显示对话框并传递虚拟文件数组
-        versionNumUpdate.showDialog(event, flattenedList.toArray(new VirtualFile[0]));
+        handleFile.showDialog(event, flattenedList.toArray(new VirtualFile[0]));
 
     }
 }

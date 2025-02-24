@@ -23,10 +23,10 @@
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
         <!-- Register your cache manager as a service -->
-        <applicationService serviceImplementation="com.ttxp.demo.MyPluginCacheManager"/>
+        <applicationService serviceImplementation="com.ttxp.demo.util.MyPluginCacheManager"/>
     </extensions>
     <actions>
-        <action id="com.ttxp.demo" class="com.ttxp.demo.VersionNumUpdate" text="FluxVersionNumUpdate">
+        <action id="com.ttxp.demo" class="com.ttxp.demo.VNUMainAction" text="FluxVersionNumUpdate">
 <!--            <add-to-group group-id="HelpMenu" anchor="after" relative-to-action="About"/>-->
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
         </action>

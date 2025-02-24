@@ -1,4 +1,4 @@
-package com.ttxp.demo;
+package com.ttxp.demo.util;
 
 /**
  * 常量类
@@ -19,7 +19,21 @@ public class VNUCval {
     /**
      * 打印日志
      */
-    public static final boolean logPrint = false;
+    public static final boolean logPrint = true;
+
+    /**
+     * 日志打印
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2024/11/15
+     *
+     * @param logs
+     */
+    public static void printLog(String logs) {
+        if (VNUCval.logPrint) {
+            System.out.println(logs);
+        }
+    }
 
     /**
      * label
