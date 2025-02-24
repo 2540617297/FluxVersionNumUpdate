@@ -17,6 +17,11 @@ package com.ttxp.demo;
 public class VNUCval {
 
     /**
+     * 打印日志
+     */
+    public static final boolean logPrint = false;
+
+    /**
      * label
      */
     /**

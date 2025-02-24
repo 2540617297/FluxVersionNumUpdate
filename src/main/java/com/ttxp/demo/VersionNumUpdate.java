@@ -96,7 +96,7 @@ public class VersionNumUpdate extends AnAction {
      * @param e
      * @param files
      */
-    private void showDialog(AnActionEvent e, VirtualFile[] files) {
+    public void showDialog(AnActionEvent e, VirtualFile[] files) {
 
         // 二级框
         JFrame frame = new JFrame(F_TITLE_K_L);

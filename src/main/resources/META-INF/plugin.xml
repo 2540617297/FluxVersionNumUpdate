@@ -30,6 +30,10 @@
 <!--            <add-to-group group-id="HelpMenu" anchor="after" relative-to-action="About"/>-->
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
         </action>
+
+        <action id="com.ttxp.demo.commit" class="com.ttxp.demo.VNUCommitAction" text="FluxVersionNumUpdate Commit">
+            <add-to-group group-id="ChangesViewPopupMenu" anchor="last"/>
+        </action>
     </actions>
 
 </idea-plugin>
