@@ -19,7 +19,7 @@ public class VNUCval {
     /**
      * 打印日志
      */
-    public static final boolean logPrint = true;
+    public static final boolean logPrint = false;
 
     /**
      * 日志打印

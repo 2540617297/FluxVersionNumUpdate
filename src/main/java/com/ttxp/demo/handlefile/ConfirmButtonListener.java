@@ -47,23 +47,17 @@ import static com.ttxp.demo.util.VNUCval.*;
 public class ConfirmButtonListener implements ActionListener {
 
     private AnActionEvent e;
-    private VirtualFile[] files;
-    private HashSet<String> containsUpdateNotes;
-    private AtomicInteger dictoryFileNum;
     private VNUGUI vnugui;
 
-    public ConfirmButtonListener(AnActionEvent e, VirtualFile[] files, HashSet<String> containsUpdateNotes, AtomicInteger dictoryFileNum, VNUGUI vnugui) {
+    public ConfirmButtonListener(AnActionEvent e, VNUGUI vnugui) {
         this.e = e;
-        this.files = files;
-        this.containsUpdateNotes = containsUpdateNotes;
-        this.dictoryFileNum = dictoryFileNum;
         this.vnugui = vnugui;
     }
 
 
     @Override
     public void actionPerformed(ActionEvent e1) {
-
+        VirtualFile[] files = vnugui.updateItem.isSelected() ? vnugui.getFlattenedFiles() : vnugui.orgFiles;
         String taskType;
         // 默认选择“任务”
         if (vnugui.radioButton2.isSelected()) {
@@ -169,7 +163,7 @@ public class ConfirmButtonListener implements ActionListener {
                 }
 
                 // 判断是否需要同步更新updateNotes
-                if (vnugui.updateItem.isSelected()) {
+                /*if (vnugui.updateItem.isSelected()) {
                     HashSet<String> directorys = new HashSet<>();
                     for (ResultObj resultObj : resultList) {
                         if (resultObj.isOk()) {
@@ -235,11 +229,11 @@ public class ConfirmButtonListener implements ActionListener {
                         }
                     }
 
-                }
+                }*/
 
                 // 判断是否有报错返回展示对应信息
                 if (hasErr.get()) {
-                    vnugui.showMessageDialog(e, resultList, successFileNum.get(), failFileNum.get(), dictoryFileNum.get());
+                    vnugui.showMessageDialog(e, resultList, successFileNum.get(), failFileNum.get());
                 } else {
                     Messages.showInfoMessage(MSG_SUCCESS, MSG_MESSGE);
                 }

@@ -1,7 +1,12 @@
 package com.ttxp.demo;
 
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.module.Module;
+import com.intellij.openapi.module.ModuleUtilCore;
+import com.intellij.openapi.roots.ModuleRootManager;
+import com.intellij.openapi.roots.ModuleRootModel;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.ttxp.demo.handlefile.ConfirmButtonListener;
 import com.ttxp.demo.util.MyPluginCacheManager;
@@ -11,10 +16,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -54,6 +57,15 @@ public class VNUGUI {
     public JRadioButton radioButton1;
     // 取消按钮
     public JRadioButton radioButton2;
+    // 文件展示框
+    public JTextArea descriptionArea;
+    // module文件
+    public Map<Module, List<VirtualFile>> moduleMap = new HashMap<>();
+    // 原始选中文件
+    public VirtualFile[] orgFiles;
+    // 更新文件缓存 cache/select
+    Map<String, String> updateNotesMap = new HashMap<>();
+
 
     /**
      * 展示二级框
@@ -65,7 +77,10 @@ public class VNUGUI {
      * @param files
      */
     public void showDialog(AnActionEvent e, VirtualFile[] files) {
-
+        orgFiles = files;
+        // 文件分类-识别UpdateNotes文件
+        IdentificationModule(e, files);
+        indexUpdateNotes();
         // 二级框
         frame = new JFrame(F_TITLE_K_L);
         frame.setSize(800, 300);
@@ -76,17 +91,13 @@ public class VNUGUI {
 
         // 创建顶部输入面板
         JPanel topPanel = createTopPanel();
-
-        HashSet<String> containsUpdateNotes = new HashSet<>();
-        AtomicInteger dictoryFileNum = new AtomicInteger();
         // 创建文件信息展示面板
-        JPanel middlePanel = createMiddlePanel(files, containsUpdateNotes, dictoryFileNum);
+        JPanel middlePanel = createMiddlePanel();
 
         // 主要逻辑，is here................
         // 创建底部按钮面板
-        JPanel bottomPanel = createBottomPanel(e, files, containsUpdateNotes, dictoryFileNum);
+        JPanel bottomPanel = createBottomPanel(e);
         // end................
-
 
         // 将面板添加到主窗口
         frame.add(topPanel, BorderLayout.NORTH);
@@ -103,6 +114,89 @@ public class VNUGUI {
         restoreDataFromCache();
 
         frame.setVisible(true);
+    }
+
+    /**
+     * 识别module
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/28
+     *
+     * @param e
+     * @param files
+     */
+    private void IdentificationModule(AnActionEvent e, VirtualFile[] files) {
+        for (VirtualFile virtualFile : files) {
+            // 查找文件所属的模块
+            Module module = ModuleUtilCore.findModuleForFile(virtualFile, e.getProject());
+            // 如果模块不为空
+            if (module != null) {
+                // 获取模块的根模型
+                ModuleRootModel moduleRootModel = ModuleRootManager.getInstance(module);
+                // 获取内容根目录数组
+                VirtualFile[] contentRoots = moduleRootModel.getContentRoots();
+                // 如果内容根目录为空，则跳过
+                if (contentRoots == null || contentRoots.length <= 0) {
+                    continue;
+                }
+                // 获取虚拟文件的规范文件路径
+                VirtualFile canonicalFile = virtualFile.getCanonicalFile();
+                // 如果规范文件为空，则跳过
+                if (canonicalFile == null) {
+                    continue;
+                }
+                // 如果模块映射中已包含该模块，则添加虚拟文件到对应模块的列表中
+                if (moduleMap.containsKey(module)) {
+                    moduleMap.get(module).add(virtualFile);
+                } else {
+                    // 否则，创建新的文件列表，添加虚拟文件，并放入模块映射中
+                    ArrayList<VirtualFile> changes1 = new ArrayList<>();
+                    changes1.add(virtualFile);
+                    moduleMap.put(module, changes1);
+                }
+            }
+        }
+    }
+
+    /**
+     * 识别UpdateNotes文件
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/28
+     */
+    public void indexUpdateNotes() {
+        // 获取本地文件系统实例
+        LocalFileSystem localFileSystem = LocalFileSystem.getInstance();
+        // 获取模块映射的键集
+        Set<Module> modules = moduleMap.keySet();
+        // 遍历每个模块
+        for (Module module : modules) {
+            // 获取模块对应的虚拟文件列表
+            List<VirtualFile> virtualFiles = moduleMap.get(module);
+            // 检查是否存在名为"UpdateNotes.txt"的文件
+            Optional<VirtualFile> optionalVirtualFile = virtualFiles.stream().filter(virtualFile -> virtualFile.getName().equalsIgnoreCase("UpdateNotes.txt")).findAny();
+            // 如果不存在
+            if (!optionalVirtualFile.isPresent()) {
+                // 获取当前模块的根模型
+                ModuleRootModel moduleRootModel = ModuleRootManager.getInstance(module);
+                // 获取内容根目录数组
+                VirtualFile[] contentRoots = moduleRootModel.getContentRoots();
+                // 如果内容根目录为空，则跳过
+                if (contentRoots == null || contentRoots.length <= 0) {
+                    return;
+                }
+                // 获取第一个内容根目录的路径
+                String modulePath = contentRoots[0].getPath();
+                // 拼接updateNotes路径
+                String updateNotesPath = modulePath + "/src/main/resources/updatenotes/UpdateNotes.txt";
+                // 在本地文件系统中查找对应的虚拟文件
+                VirtualFile virtualFile = localFileSystem.findFileByPath(updateNotesPath);
+                // 如果虚拟文件存在，则添加到虚拟文件列表中
+                if (virtualFile != null) {
+                    virtualFiles.add(virtualFile);
+                }
+            }
+        }
     }
 
     /**
@@ -282,42 +376,17 @@ public class VNUGUI {
      * @param dictoryFileNum
      * @return javax.swing.JPanel
      */
-    private JPanel createMiddlePanel(VirtualFile[] files, HashSet<String> containsUpdateNotes, AtomicInteger dictoryFileNum) {
-        StringBuffer filesDirs = new StringBuffer();
-        AtomicInteger fileNum = new AtomicInteger();
-
-        // 统计文件和目录数量
-        Stream.of(files).forEach(file -> {
-            if (file.isDirectory()) {
-                dictoryFileNum.incrementAndGet();
-            } else {
-                fileNum.incrementAndGet();
-            }
-        });
-
-        filesDirs.append(F_FILESNUM_K_L + files.length + "," + F_DIRECTORY_K_L + dictoryFileNum.get() + "," + F_FILE_K_L + fileNum.get() + "\n");
-
-        // 遍历文件数组，记录文件路径
-        Stream.of(files).forEach(file -> {
-            if (file.isDirectory()) {
-                return;
-            }
-            String path = file.getPath();
-            if (path.contains("UpdateNotes.txt")) {
-                containsUpdateNotes.add(path);
-            }
-            filesDirs.append(path + "\n");
-        });
+    private JPanel createMiddlePanel() {
 
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
         JLabel label3 = new JLabel(F_UPDATEFILES_K_L);
         centerPanel.add(label3);
 
-        JTextArea descriptionArea = new JTextArea(15, 130);
+        descriptionArea = new JTextArea(15, 130);
         descriptionArea.setEditable(false);
-        descriptionArea.setText(filesDirs.toString());
-        descriptionArea.setCaretPosition(1);
+//        descriptionArea.setText(filesDirs.toString());
+//        descriptionArea.setCaretPosition(1);
 
         JScrollPane scrollPane = new JScrollPane(descriptionArea);
 
@@ -341,14 +410,14 @@ public class VNUGUI {
      * @param dictoryFileNum
      * @return javax.swing.JPanel
      */
-    private JPanel createBottomPanel(AnActionEvent e, VirtualFile[] files, HashSet<String> containsUpdateNotes, AtomicInteger dictoryFileNum) {
+    private JPanel createBottomPanel(AnActionEvent e) {
         JPanel bottomPanel = new JPanel();
 
         JButton confirmButton = new JButton(F_CONFIRM_K_L);
         JButton cancelButton = new JButton(F_CANCEL_K_L);
 
         // 确认后回调
-        confirmButton.addActionListener(new ConfirmButtonListener(e, files, containsUpdateNotes, dictoryFileNum, this));
+        confirmButton.addActionListener(new ConfirmButtonListener(e, this));
 
         cancelButton.addActionListener(e1 -> frame.dispose());
 
@@ -359,6 +428,12 @@ public class VNUGUI {
     }
 
 
+    /**
+     * 居中显示
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/27
+     */
     private void centerFrameOnScreen() {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         int x = (screenSize.width - frame.getWidth()) / 2;
@@ -366,6 +441,12 @@ public class VNUGUI {
         frame.setLocation(x, y);
     }
 
+    /**
+     * 缓存加载
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/27
+     */
     private void restoreDataFromCache() {
         MyPluginCacheManager cacheManager = MyPluginCacheManager.getInstance();
         if (cacheManager != null) {
@@ -384,6 +465,8 @@ public class VNUGUI {
                 VNUGUI.updateMenuItem(cachedSetting, S_UPDATE_KEY, updateItem, S_UPDATE_ITEM_S_L, S_UPDATE_ITEM_F_L);
                 VNUGUI.updateMenuItem(cachedSetting, S_CACHE_KEY, cacheItem, S_CACHE_ITEM_S_L, S_CACHE_ITEM_F_L);
                 VNUGUI.updateMenuItem(cachedSetting, S_COPY_KEY, copyItem, S_CACHE_COPYNOTES_S_L, S_CACHE_COPYNOTES_F_L);
+
+                setDescription();
 
                 // 如果设置为缓存，则更新相应的文本框和单选按钮
                 if ("Y".equals(cachedSetting.get(S_CACHE_KEY))) {
@@ -413,6 +496,55 @@ public class VNUGUI {
     }
 
     /**
+     * 设置处理文件展示
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/28
+     */
+    public void setDescription() {
+        String key = updateItem.isSelected() ? "SYS" : "SELECT";
+        String cacheNotes = updateNotesMap.get(key);
+        if (cacheNotes != null && !cacheNotes.isEmpty()) {
+            descriptionArea.setText(cacheNotes);
+            return;
+        }
+
+        VirtualFile[] files = updateItem.isSelected() ? getFlattenedFiles() : orgFiles;
+        StringBuffer filesDirs = new StringBuffer();
+        AtomicInteger fileNum = new AtomicInteger();
+        // 统计文件和目录数量
+        Stream.of(files).forEach(file -> {
+            fileNum.incrementAndGet();
+        });
+
+        filesDirs.append(F_FILESNUM_K_L + files.length + "," + F_FILE_K_L + fileNum.get() + "\n");
+
+        // 遍历文件数组，记录文件路径
+        Stream.of(files)
+                .filter(file -> !file.isDirectory())
+                .map(VirtualFile::getPath)
+                .forEach(path -> filesDirs.append(path + "\n"));
+
+        updateNotesMap.put(key, filesDirs.toString());
+        descriptionArea.setText(filesDirs.toString());
+    }
+
+    /**
+     * 根据module获取file
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/28
+     *
+     * @return com.intellij.openapi.vfs.VirtualFile[]
+     */
+    public VirtualFile[] getFlattenedFiles() {
+        List<VirtualFile> flattenedList = moduleMap.values().stream()
+                .flatMap(List::stream)
+                .toList();
+        return flattenedList.toArray(new VirtualFile[0]);
+    }
+
+    /**
      * 展示失败信息
      *
      * <p>Author: pengtai
@@ -421,7 +553,7 @@ public class VNUGUI {
      * @param e
      * @param resultObjList
      */
-    public void showMessageDialog(AnActionEvent e, List<ResultObj> resultObjList, int successNum, int failFileNum, int directoryFileNum) {
+    public void showMessageDialog(AnActionEvent e, List<ResultObj> resultObjList, int successNum, int failFileNum) {
         JFrame frame = new JFrame("错误信息");
         frame.setSize(900, 800);
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -429,7 +561,7 @@ public class VNUGUI {
 
         // 说明框
         StringBuffer messages = new StringBuffer();
-        messages.append(MSG_SUCCESSFILENUM + successNum + "," + F_DIRECTORY_K_L + directoryFileNum + "," + MSG_FAILFILENUM + failFileNum + "\n");
+        messages.append(MSG_SUCCESSFILENUM + successNum + "," + MSG_FAILFILENUM + failFileNum + "\n");
         for (ResultObj resultObj : resultObjList) {
             if (!resultObj.isOk()) {
                 messages.append(resultObj.getFilePath()).append(":\n").append(resultObj.getMessage()).append("\n");
@@ -480,10 +612,13 @@ public class VNUGUI {
      * @param unselectedText 未选中时显示的文本
      * @param cacheKey       缓存键
      */
-    protected static void setupMenuItem(JMenuItem item, String selectedText, String unselectedText, String cacheKey) {
+    protected void setupMenuItem(JMenuItem item, String selectedText, String unselectedText, String cacheKey) {
         item.addActionListener(e -> {
             // 切换菜单项的勾选状态
             item.setSelected(!item.isSelected());
+            if (updateItem == item) {
+                setDescription();
+            }
             if (item.isSelected()) {
                 item.setText(selectedText);
             } else {
