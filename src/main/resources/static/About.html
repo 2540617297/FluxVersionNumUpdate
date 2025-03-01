@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FluxVersionNumUpdate插件说明</title>
+    <style>
+        /* 全局样式 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+
+        /* 标题样式 */
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            color: #2c3e50;
+            margin-top: 1.5em;
+            margin-bottom: 0.7em;
+        }
+
+        h1 {
+            font-size: 2.2em;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8em;
+            border-bottom: 2px solid #bdc3c7;
+            padding-bottom: 5px;
+        }
+
+        h3 {
+            font-size: 1.5em;
+        }
+
+        /* 列表样式 */
+        ul,
+        ol {
+            margin-left: 2em;
+            padding-left: 0;
+        }
+
+        ul li,
+        ol li {
+            margin-bottom: 10px;
+        }
+
+        /* 图片样式 */
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 代码块样式 */
+        pre {
+            background-color: #ecf0f1;
+            padding: 15px;
+            overflow-x: auto;
+            border-radius: 5px;
+            border: 1px solid #bdc3c7;
+        }
+
+        /* 链接样式 */
+        a {
+            color: #3498db;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: #2980b9;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+<h1>FluxVersionNumUpdate插件说明</h1>
+<h2>一、设置</h2>
+<p>①、同步更新UpdateNotes文件</p>
+<p>②、缓存任务号、修改描述</p>
+<p>③、执行成功复制Notes</p>
+<ul>
+    <li>1.同步更新UpdateNotes文件：如果当前功能勾选了，在修改完对应的文件后，会找到当前工程对应的/resoures/updatenotes/下的UpdateNotes.txt文件进行同步更新修改描述，如果右键已选择了对应的UpdateNotes.txt文件，默认会跳过（不会重复更新）</li>
+    <li>2.缓存任务号、修改描述：勾选后会同步缓存当次处理的任务号、修改描述</li>
+    <li>3.执行成功复制Notes：在git提交时需要提交备注信息，勾选此项后无需再手动复制一遍，直接ctrl+v粘贴到git提交备注框</li>
+    <li>4.小功能：如果执行完之后忘记“勾选（缓存任务号、修改描述）”，可以下次打开后再勾选（缓存任务号、修改描述），然后再次关闭、重新打开后会显示前一次更新“内容”</li>
+    <li>5.待上线：粘贴《XXXXXXXXX,任务：XXXX》到修改描述中，自动解析“修改描述”、“任务号、客服号”并填充到对应文本框</li>
+</ul>
+<h2>二、更多</h2>
+操作说明，请点击此链接查看更多插件信息<br>
+<a href="https://note.youdao.com/s/ZQnHSN8R">https://note.youdao.com/s/ZQnHSN8R</a>
+</body>
+
+</html>

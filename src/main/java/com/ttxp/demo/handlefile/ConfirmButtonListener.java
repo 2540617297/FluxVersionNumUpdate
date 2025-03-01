@@ -3,7 +3,6 @@ package com.ttxp.demo.handlefile;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
-import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.ttxp.demo.VNUGUI;
 import com.ttxp.demo.util.MyPluginCacheManager;
@@ -22,7 +21,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
@@ -84,7 +86,7 @@ public class ConfirmButtonListener implements ActionListener {
         }
 
         // 显示表单对话框
-        int result = JOptionPane.showConfirmDialog(null, (vnugui.updateItem.isSelected() ? MSG_CONFIRM_UPDATE + "\n" : "") + MSG_CONFIRM, "Confirmation", JOptionPane.OK_CANCEL_OPTION);
+        int result = JOptionPane.showConfirmDialog(null,  MSG_CONFIRM, "Confirmation", JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
             // 用户点击了确认按钮，执行实际的操作
             Project project = e.getProject();

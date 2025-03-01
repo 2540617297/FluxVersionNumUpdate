@@ -13,9 +13,20 @@ import com.ttxp.demo.util.MyPluginCacheManager;
 import com.ttxp.demo.util.ResultObj;
 
 import javax.swing.*;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,6 +58,8 @@ public class VNUGUI {
     public JMenuItem cacheItem;
     // 设置-复制updateNotes
     public JMenuItem copyItem;
+    // 设置-关于
+    public JMenuItem aboutItem;
     // 修改描述
     public JTextField textField1;
     // 任务号
@@ -87,6 +100,7 @@ public class VNUGUI {
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.setLayout(new BorderLayout());
 
+        // 设置菜单
         createMenuBar();
 
         // 创建顶部输入面板
@@ -207,17 +221,47 @@ public class VNUGUI {
      */
     private void createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
-        JMenu fileMenu = new JMenu(F_SETTINGS_K_L);
+        JMenu settingMenu = new JMenu(F_SETTINGS_K_L);
 
         updateItem = new JMenuItem(S_UPDATE_ITEM_F_L);
         cacheItem = new JMenuItem(S_CACHE_ITEM_F_L);
         copyItem = new JMenuItem(S_CACHE_COPYNOTES_F_L);
+        settingMenu.add(updateItem);
+        settingMenu.add(cacheItem);
+        settingMenu.add(copyItem);
 
-        fileMenu.add(updateItem);
-        fileMenu.add(cacheItem);
-        fileMenu.add(copyItem);
+        JMenu aboutMenu = new JMenu(F_ABOUT_K_L);
+        aboutItem = new JMenuItem(S_ABOUT_F_L);
+        // 添加点击事件监听器
+        aboutItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+//                aboutFrame();
+                // 指定要跳转的网址
+                URI uri = null;
+                try {
+                    uri = new URI("https://note.youdao.com/s/ZQnHSN8R");
+                    // 检查 Desktop 是否支持打开浏览器
+                    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                        // 打开默认浏览器并访问链接
+                        Desktop.getDesktop().browse(uri);
+                    }
+                } catch (URISyntaxException ex) {
+                    if(logPrint) {
+                        ex.printStackTrace();
+                    }
+                } catch (IOException ex) {
+                    if(logPrint) {
+                        ex.printStackTrace();
+                    }
+                }
 
-        menuBar.add(fileMenu);
+            }
+        });
+        aboutMenu.add(aboutItem);
+
+        menuBar.add(settingMenu);
+        menuBar.add(aboutMenu);
         frame.setJMenuBar(menuBar);
 
         // 为菜单项添加点击事件监听器
@@ -225,6 +269,83 @@ public class VNUGUI {
         setupMenuItem(cacheItem, S_CACHE_ITEM_S_L, S_CACHE_ITEM_F_L, S_CACHE_KEY);
         setupMenuItem(copyItem, S_CACHE_COPYNOTES_S_L, S_CACHE_COPYNOTES_F_L, S_COPY_KEY);
     }
+
+    /**
+     * 说明弹窗-已弃用
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/3/1
+     *
+     */
+    @Deprecated
+    private void aboutFrame() {
+
+        // 创建主窗口
+        JFrame frameAbout = new JFrame("说明");
+        frameAbout.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frameAbout.setSize(1200, 600);
+
+        // 创建一个 JEditorPane 用于显示 HTML 内容
+        JEditorPane editorPane = new JEditorPane();
+        editorPane.setContentType("text/html");
+        // 使用 ClassLoader 读取本地资源文件
+        InputStream inputStream = VNUGUI.class.getClassLoader().getResourceAsStream("static/About.html");
+        if (inputStream != null) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                StringBuilder htmlContent = new StringBuilder();
+                String line;
+                // 逐行读取输入流内容
+                while ((line = reader.readLine()) != null) {
+                    htmlContent.append(line);
+                }
+                // 设置 JEditorPane 的内容为读取到的 HTML 内容
+                editorPane.setContentType("text/html");
+                editorPane.setText(htmlContent.toString());
+            } catch (IOException e) {
+                e.printStackTrace();
+                // 如果加载失败，显示错误信息
+                editorPane.setText("Failed to load HTML file: " + e.getMessage());
+            }
+        } else {
+            // 如果未找到 HTML 文件，显示错误信息
+            editorPane.setText("HTML file not found in JAR.");
+        }
+        // 设置要显示的 HTML 内容
+        editorPane.setEditable(false); // 禁止用户编辑内容
+
+        // 为 JEditorPane 添加超链接监听器
+        editorPane.addHyperlinkListener(new HyperlinkListener() {
+            @Override
+            public void hyperlinkUpdate(HyperlinkEvent e) {
+                if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                    try {
+                        // 获取链接的 URI
+                        URI uri = e.getURL().toURI();
+                        // 检查 Desktop 是否支持打开浏览器
+                        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                            // 打开默认浏览器并访问链接
+                            Desktop.getDesktop().browse(uri);
+                        }
+                    } catch (URISyntaxException | IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        // 创建一个滚动面板，将 JEditorPane 放入其中
+        JScrollPane scrollPane = new JScrollPane(editorPane);
+
+        // 将滚动面板添加到主窗口的内容面板
+        frameAbout.getContentPane().add(scrollPane, BorderLayout.CENTER);
+
+        // 设置窗口居中显示
+        frameAbout.setLocationRelativeTo(null);
+
+        // 显示主窗口
+        frameAbout.setVisible(true);
+    }
+
 
     /**
      * 创建输入框

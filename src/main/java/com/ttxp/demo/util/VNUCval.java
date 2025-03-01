@@ -45,6 +45,7 @@ public class VNUCval {
      * 未选中更新
      */
     public static final String S_UPDATE_ITEM_F_L = "  同步更新UpdateNotes文件";
+    public static final String S_ABOUT_F_L = "操作说明";
     /**
      * 选中更新
      */
@@ -106,6 +107,7 @@ public class VNUCval {
      * 设置
      */
     public static final String F_SETTINGS_K_L = "设置";
+    public static final String F_ABOUT_K_L = "关于";
     /**
      * 姓名
      */
