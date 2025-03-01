@@ -1,6 +1,8 @@
-package com.ttxp.demo;
+package com.ttxp.demo.util;
 
 /**
+ *
+ * 返回结果对象
  * <p>
  * 创建时间：2024/10/21
  * <p>

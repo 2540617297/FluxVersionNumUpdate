@@ -1,4 +1,4 @@
-package com.ttxp.demo;
+package com.ttxp.demo.util;
 
 /**
  * 常量类
@@ -17,6 +17,25 @@ package com.ttxp.demo;
 public class VNUCval {
 
     /**
+     * 打印日志
+     */
+    public static final boolean logPrint = false;
+
+    /**
+     * 日志打印
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2024/11/15
+     *
+     * @param logs
+     */
+    public static void printLog(String logs) {
+        if (VNUCval.logPrint) {
+            System.out.println(logs);
+        }
+    }
+
+    /**
      * label
      */
     /**
@@ -26,6 +45,7 @@ public class VNUCval {
      * 未选中更新
      */
     public static final String S_UPDATE_ITEM_F_L = "  同步更新UpdateNotes文件";
+    public static final String S_ABOUT_F_L = "操作说明";
     /**
      * 选中更新
      */
@@ -87,6 +107,7 @@ public class VNUCval {
      * 设置
      */
     public static final String F_SETTINGS_K_L = "设置";
+    public static final String F_ABOUT_K_L = "关于";
     /**
      * 姓名
      */
@@ -173,6 +194,7 @@ public class VNUCval {
     public static final String MSG_208NOTSUPPORT = "暂不支持修改该文件";
     public static final String MSG_NOSTRINGNUM = "未定位到String verNum信息请检查！";
     public static final String MSG_NOVERSIONNUM = "未定位到版本号信息";
+    public static final String MSG_SPLITTASKMSG = "已自动识别:\n";
     public static final String MSG_ADMIN_MAXVERNUM = "未识别出最大版本号";
     public static final String MSG_ADMIN_MAXVERLINENUM = "未找到最大版本号所在行";
     public static final String MSG_ADMIN_VERNUMGEN = "verNum生成失败，请联系管理员检查！";

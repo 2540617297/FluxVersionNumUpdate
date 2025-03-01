@@ -1,4 +1,4 @@
-package com.ttxp.demo;
+package com.ttxp.demo.util;
 
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.PersistentStateComponent;
@@ -8,6 +8,22 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 
+/**
+ * 缓存管理器
+ *
+ * <p>
+ * 创建时间：2025/2/24
+ * <p>
+ *
+ * <p>
+ * 修改时间：2025/2/24
+ * <p>
+ *
+ * @author pengtai
+ *
+ * @version V1.0.0
+ *
+ */
 @State(
         name = "MyPluginCacheManager",
         storages = {@Storage("myplugin_cache.xml")}

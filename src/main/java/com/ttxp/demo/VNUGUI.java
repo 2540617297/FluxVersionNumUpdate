@@ -1,0 +1,795 @@
+package com.ttxp.demo;
+
+import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.module.Module;
+import com.intellij.openapi.module.ModuleUtilCore;
+import com.intellij.openapi.roots.ModuleRootManager;
+import com.intellij.openapi.roots.ModuleRootModel;
+import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.vfs.LocalFileSystem;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.ttxp.demo.handlefile.ConfirmButtonListener;
+import com.ttxp.demo.util.MyPluginCacheManager;
+import com.ttxp.demo.util.ResultObj;
+
+import javax.swing.*;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.*;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
+import static com.ttxp.demo.util.VNUCval.*;
+
+/**
+ * 更新版本号-二级框代码
+ *
+ * <p>
+ * 创建时间：2025/2/24
+ * <p>
+ *
+ * <p>
+ * 修改时间：2025/2/24
+ * <p>
+ *
+ * @author pengtai
+ * @version V1.0.0
+ */
+public class VNUGUI {
+
+    // 主窗口
+    public JFrame frame;
+    // 设置-更新updateNotes
+    public JMenuItem updateItem;
+    // 设置-缓存任务号、更新描述
+    public JMenuItem cacheItem;
+    // 设置-复制updateNotes
+    public JMenuItem copyItem;
+    // 设置-关于
+    public JMenuItem aboutItem;
+    // 修改描述
+    public JTextField textField1;
+    // 任务号
+    public JTextField textField2;
+    // 姓名
+    public JTextField textField4;
+    // 确认按钮
+    public JRadioButton radioButton1;
+    // 取消按钮
+    public JRadioButton radioButton2;
+    // 文件展示框
+    public JTextArea descriptionArea;
+    // module文件
+    public Map<Module, List<VirtualFile>> moduleMap = new HashMap<>();
+    // 原始选中文件
+    public VirtualFile[] orgFiles;
+    // 更新文件缓存 cache/select
+    Map<String, String> updateNotesMap = new HashMap<>();
+
+
+    /**
+     * 展示二级框
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2024/10/11
+     *
+     * @param e
+     * @param files
+     */
+    public void showDialog(AnActionEvent e, VirtualFile[] files) {
+        orgFiles = files;
+        // 文件分类-识别UpdateNotes文件
+        IdentificationModule(e, files);
+        indexUpdateNotes();
+        // 二级框
+        frame = new JFrame(F_TITLE_K_L);
+        frame.setSize(800, 300);
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frame.setLayout(new BorderLayout());
+
+        // 设置菜单
+        createMenuBar();
+
+        // 创建顶部输入面板
+        JPanel topPanel = createTopPanel();
+        // 创建文件信息展示面板
+        JPanel middlePanel = createMiddlePanel();
+
+        // 主要逻辑，is here................
+        // 创建底部按钮面板
+        JPanel bottomPanel = createBottomPanel(e);
+        // end................
+
+        // 将面板添加到主窗口
+        frame.add(topPanel, BorderLayout.NORTH);
+        frame.add(middlePanel);
+        frame.add(bottomPanel, BorderLayout.SOUTH);
+
+        // 调整窗口大小以适应组件
+        frame.pack();
+
+        // 将窗口显示在屏幕中央
+        centerFrameOnScreen();
+
+        // 获取缓存管理器实例
+        restoreDataFromCache();
+
+        frame.setVisible(true);
+    }
+
+    /**
+     * 识别module
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/28
+     *
+     * @param e
+     * @param files
+     */
+    private void IdentificationModule(AnActionEvent e, VirtualFile[] files) {
+        for (VirtualFile virtualFile : files) {
+            // 查找文件所属的模块
+            Module module = ModuleUtilCore.findModuleForFile(virtualFile, e.getProject());
+            // 如果模块不为空
+            if (module != null) {
+                // 获取模块的根模型
+                ModuleRootModel moduleRootModel = ModuleRootManager.getInstance(module);
+                // 获取内容根目录数组
+                VirtualFile[] contentRoots = moduleRootModel.getContentRoots();
+                // 如果内容根目录为空，则跳过
+                if (contentRoots == null || contentRoots.length <= 0) {
+                    continue;
+                }
+                // 获取虚拟文件的规范文件路径
+                VirtualFile canonicalFile = virtualFile.getCanonicalFile();
+                // 如果规范文件为空，则跳过
+                if (canonicalFile == null) {
+                    continue;
+                }
+                // 如果模块映射中已包含该模块，则添加虚拟文件到对应模块的列表中
+                if (moduleMap.containsKey(module)) {
+                    moduleMap.get(module).add(virtualFile);
+                } else {
+                    // 否则，创建新的文件列表，添加虚拟文件，并放入模块映射中
+                    ArrayList<VirtualFile> changes1 = new ArrayList<>();
+                    changes1.add(virtualFile);
+                    moduleMap.put(module, changes1);
+                }
+            }
+        }
+    }
+
+    /**
+     * 识别UpdateNotes文件
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/28
+     */
+    public void indexUpdateNotes() {
+        // 获取本地文件系统实例
+        LocalFileSystem localFileSystem = LocalFileSystem.getInstance();
+        // 获取模块映射的键集
+        Set<Module> modules = moduleMap.keySet();
+        // 遍历每个模块
+        for (Module module : modules) {
+            // 获取模块对应的虚拟文件列表
+            List<VirtualFile> virtualFiles = moduleMap.get(module);
+            // 检查是否存在名为"UpdateNotes.txt"的文件
+            Optional<VirtualFile> optionalVirtualFile = virtualFiles.stream().filter(virtualFile -> virtualFile.getName().equalsIgnoreCase("UpdateNotes.txt")).findAny();
+            // 如果不存在
+            if (!optionalVirtualFile.isPresent()) {
+                // 获取当前模块的根模型
+                ModuleRootModel moduleRootModel = ModuleRootManager.getInstance(module);
+                // 获取内容根目录数组
+                VirtualFile[] contentRoots = moduleRootModel.getContentRoots();
+                // 如果内容根目录为空，则跳过
+                if (contentRoots == null || contentRoots.length <= 0) {
+                    return;
+                }
+                // 获取第一个内容根目录的路径
+                String modulePath = contentRoots[0].getPath();
+                // 拼接updateNotes路径
+                String updateNotesPath = modulePath + "/src/main/resources/updatenotes/UpdateNotes.txt";
+                // 在本地文件系统中查找对应的虚拟文件
+                VirtualFile virtualFile = localFileSystem.findFileByPath(updateNotesPath);
+                // 如果虚拟文件存在，则添加到虚拟文件列表中
+                if (virtualFile != null) {
+                    virtualFiles.add(virtualFile);
+                }
+            }
+        }
+    }
+
+    /**
+     * 设置菜单项
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/24
+     */
+    private void createMenuBar() {
+        JMenuBar menuBar = new JMenuBar();
+        JMenu settingMenu = new JMenu(F_SETTINGS_K_L);
+
+        updateItem = new JMenuItem(S_UPDATE_ITEM_F_L);
+        cacheItem = new JMenuItem(S_CACHE_ITEM_F_L);
+        copyItem = new JMenuItem(S_CACHE_COPYNOTES_F_L);
+        settingMenu.add(updateItem);
+        settingMenu.add(cacheItem);
+        settingMenu.add(copyItem);
+
+        JMenu aboutMenu = new JMenu(F_ABOUT_K_L);
+        aboutItem = new JMenuItem(S_ABOUT_F_L);
+        // 添加点击事件监听器
+        aboutItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+//                aboutFrame();
+                // 指定要跳转的网址
+                URI uri = null;
+                try {
+                    uri = new URI("https://note.youdao.com/s/ZQnHSN8R");
+                    // 检查 Desktop 是否支持打开浏览器
+                    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                        // 打开默认浏览器并访问链接
+                        Desktop.getDesktop().browse(uri);
+                    }
+                } catch (URISyntaxException ex) {
+                    if(logPrint) {
+                        ex.printStackTrace();
+                    }
+                } catch (IOException ex) {
+                    if(logPrint) {
+                        ex.printStackTrace();
+                    }
+                }
+
+            }
+        });
+        aboutMenu.add(aboutItem);
+
+        menuBar.add(settingMenu);
+        menuBar.add(aboutMenu);
+        frame.setJMenuBar(menuBar);
+
+        // 为菜单项添加点击事件监听器
+        setupMenuItem(updateItem, S_UPDATE_ITEM_S_L, S_UPDATE_ITEM_F_L, S_UPDATE_KEY);
+        setupMenuItem(cacheItem, S_CACHE_ITEM_S_L, S_CACHE_ITEM_F_L, S_CACHE_KEY);
+        setupMenuItem(copyItem, S_CACHE_COPYNOTES_S_L, S_CACHE_COPYNOTES_F_L, S_COPY_KEY);
+    }
+
+    /**
+     * 说明弹窗-已弃用
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/3/1
+     *
+     */
+    @Deprecated
+    private void aboutFrame() {
+
+        // 创建主窗口
+        JFrame frameAbout = new JFrame("说明");
+        frameAbout.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frameAbout.setSize(1200, 600);
+
+        // 创建一个 JEditorPane 用于显示 HTML 内容
+        JEditorPane editorPane = new JEditorPane();
+        editorPane.setContentType("text/html");
+        // 使用 ClassLoader 读取本地资源文件
+        InputStream inputStream = VNUGUI.class.getClassLoader().getResourceAsStream("static/About.html");
+        if (inputStream != null) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                StringBuilder htmlContent = new StringBuilder();
+                String line;
+                // 逐行读取输入流内容
+                while ((line = reader.readLine()) != null) {
+                    htmlContent.append(line);
+                }
+                // 设置 JEditorPane 的内容为读取到的 HTML 内容
+                editorPane.setContentType("text/html");
+                editorPane.setText(htmlContent.toString());
+            } catch (IOException e) {
+                e.printStackTrace();
+                // 如果加载失败，显示错误信息
+                editorPane.setText("Failed to load HTML file: " + e.getMessage());
+            }
+        } else {
+            // 如果未找到 HTML 文件，显示错误信息
+            editorPane.setText("HTML file not found in JAR.");
+        }
+        // 设置要显示的 HTML 内容
+        editorPane.setEditable(false); // 禁止用户编辑内容
+
+        // 为 JEditorPane 添加超链接监听器
+        editorPane.addHyperlinkListener(new HyperlinkListener() {
+            @Override
+            public void hyperlinkUpdate(HyperlinkEvent e) {
+                if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                    try {
+                        // 获取链接的 URI
+                        URI uri = e.getURL().toURI();
+                        // 检查 Desktop 是否支持打开浏览器
+                        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                            // 打开默认浏览器并访问链接
+                            Desktop.getDesktop().browse(uri);
+                        }
+                    } catch (URISyntaxException | IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        // 创建一个滚动面板，将 JEditorPane 放入其中
+        JScrollPane scrollPane = new JScrollPane(editorPane);
+
+        // 将滚动面板添加到主窗口的内容面板
+        frameAbout.getContentPane().add(scrollPane, BorderLayout.CENTER);
+
+        // 设置窗口居中显示
+        frameAbout.setLocationRelativeTo(null);
+
+        // 显示主窗口
+        frameAbout.setVisible(true);
+    }
+
+
+    /**
+     * 创建输入框
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/24
+     *
+     * @param labelText
+     * @return javax.swing.JPanel
+     */
+    private JPanel createInputPanel(String labelText) {
+        JPanel panel = new JPanel(new GridBagLayout());
+        JLabel label = new JLabel(labelText);
+        label.setPreferredSize(new Dimension(80, 30));
+        JTextField textField = new JTextField(30);
+        panel.add(label);
+        GridBagConstraints c = new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 1.0;
+        panel.add(textField, c);
+        return panel;
+    }
+
+    /**
+     * 创建单选框
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/24
+     *
+     * @return javax.swing.JPanel
+     */
+    private JPanel createRadioPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new GridBagLayout());
+
+        JPanel leftPanel = new JPanel();
+        leftPanel.setLayout(new GridBagLayout());
+        radioButton1 = new JRadioButton(F_TASKTYPE_R_L);
+        radioButton1.setSelected(true);
+        leftPanel.add(radioButton1);
+
+        JPanel rightPanel = new JPanel();
+        rightPanel.setLayout(new GridBagLayout());
+        radioButton2 = new JRadioButton(F_TASKTYPE_K_L);
+        rightPanel.add(radioButton2);
+
+        GridBagConstraints left = new GridBagConstraints();
+        left.gridx = 0;
+        left.weightx = 0.5;
+        left.fill = GridBagConstraints.CENTER;
+
+        GridBagConstraints right = new GridBagConstraints();
+        right.gridx = 1;
+        right.weightx = 0.5;
+        right.fill = GridBagConstraints.CENTER;
+
+        panel.add(leftPanel, left);
+        panel.add(rightPanel, right);
+
+        ButtonGroup buttonGroup = new ButtonGroup();
+        buttonGroup.add(radioButton1);
+        buttonGroup.add(radioButton2);
+
+        return panel;
+    }
+
+    /**
+     * 创建顶部面板（姓名、修改描述、任务号）
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/24
+     *
+     * @return javax.swing.JPanel
+     */
+    private JPanel createTopPanel() {
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
+
+        // 姓名输入框
+        JPanel topPanelName = createInputPanel(F_USERNAME_K_L);
+        textField4 = (JTextField)topPanelName.getComponent(1);
+
+        // 修改描述输入框
+        JPanel topPanelMsg = createInputPanel(F_UPDATEMSG_K_L);
+        textField1 = (JTextField)topPanelMsg.getComponent(1);
+        textField1.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e1) {
+                // 当输入框获得焦点时，暂时不做处理
+            }
+
+            @Override
+            public void focusLost(FocusEvent e2) {
+                // 当 JTextField 失去焦点时触发
+                // 这里可以添加你自己的逻辑，比如验证输入内容
+                String text = textField1.getText();
+                boolean success = false;
+                if (text != null && !text.isEmpty()) {
+                    printLog(text);
+                    String[] keys = {"任务：", "客服：", "任务:", "客服:"};
+                    for (String key : keys) {
+                        if (text.contains(key)) {
+                            int index = text.indexOf(key);
+                            String taskMsg = text.substring(0, index);
+                            if (taskMsg.endsWith(",") || taskMsg.endsWith("，")) {
+                                taskMsg = taskMsg.substring(0, taskMsg.length() - 1);
+                            }
+                            textField1.setText(taskMsg);
+                            textField2.setText(text.substring(index + 3));
+                            if (key.contains("任务")) {
+                                radioButton1.setSelected(true);
+                            } else {
+                                radioButton2.setSelected(true);
+                            }
+                            success = true;
+                            break;
+                        }
+                    }
+                    if (success) {
+                        Messages.showInfoMessage(MSG_SPLITTASKMSG + "《" + text + "》", MSG_MESSGE);
+                    }
+                }
+            }
+        });
+
+        // 任务号输入框
+        JPanel topPanelTaskNo = createInputPanel(F_RORK_K_L);
+        textField2 = (JTextField)topPanelTaskNo.getComponent(1);
+
+        // 单选框
+        JPanel radioPanel = createRadioPanel();
+
+        topPanel.add(topPanelName);
+        topPanel.add(topPanelMsg);
+        topPanel.add(topPanelTaskNo);
+        topPanel.add(radioPanel);
+
+        return topPanel;
+    }
+
+    /**
+     * 创建中间面板（文件列表）
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/24
+     *
+     * @param files
+     * @param containsUpdateNotes
+     * @param dictoryFileNum
+     * @return javax.swing.JPanel
+     */
+    private JPanel createMiddlePanel() {
+
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        JLabel label3 = new JLabel(F_UPDATEFILES_K_L);
+        centerPanel.add(label3);
+
+        descriptionArea = new JTextArea(15, 130);
+        descriptionArea.setEditable(false);
+//        descriptionArea.setText(filesDirs.toString());
+//        descriptionArea.setCaretPosition(1);
+
+        JScrollPane scrollPane = new JScrollPane(descriptionArea);
+
+        JPanel middleContainerPanel = new JPanel();
+        middleContainerPanel.setLayout(new BoxLayout(middleContainerPanel, BoxLayout.Y_AXIS));
+        middleContainerPanel.add(centerPanel);
+        middleContainerPanel.add(scrollPane);
+
+        return middleContainerPanel;
+    }
+
+    /**
+     * 创建底部面板（确认、取消）
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/24
+     *
+     * @param e
+     * @param files
+     * @param containsUpdateNotes
+     * @param dictoryFileNum
+     * @return javax.swing.JPanel
+     */
+    private JPanel createBottomPanel(AnActionEvent e) {
+        JPanel bottomPanel = new JPanel();
+
+        JButton confirmButton = new JButton(F_CONFIRM_K_L);
+        JButton cancelButton = new JButton(F_CANCEL_K_L);
+
+        // 确认后回调
+        confirmButton.addActionListener(new ConfirmButtonListener(e, this));
+
+        cancelButton.addActionListener(e1 -> frame.dispose());
+
+        bottomPanel.add(confirmButton);
+        bottomPanel.add(cancelButton);
+
+        return bottomPanel;
+    }
+
+
+    /**
+     * 居中显示
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/27
+     */
+    private void centerFrameOnScreen() {
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        int x = (screenSize.width - frame.getWidth()) / 2;
+        int y = (screenSize.height - frame.getHeight()) / 2;
+        frame.setLocation(x, y);
+    }
+
+    /**
+     * 缓存加载
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/27
+     */
+    private void restoreDataFromCache() {
+        MyPluginCacheManager cacheManager = MyPluginCacheManager.getInstance();
+        if (cacheManager != null) {
+            Map<String, String> cachedSetting = cacheManager.getCachedFormValue();
+            if (cachedSetting != null && !cachedSetting.isEmpty()) {
+                // 从缓存中取userName
+                String userName = cachedSetting.get(F_USERNAME);
+                if (userName != null && !userName.isEmpty()) {
+                    textField4.setText(userName);
+                    // 进行一些操作，比如输出缓存的值
+                    printLog("Cached setting: " + cachedSetting);
+                    textField1.requestFocus();
+                }
+
+                // 更新菜单项的选中状态和文本
+                VNUGUI.updateMenuItem(cachedSetting, S_UPDATE_KEY, updateItem, S_UPDATE_ITEM_S_L, S_UPDATE_ITEM_F_L);
+                VNUGUI.updateMenuItem(cachedSetting, S_CACHE_KEY, cacheItem, S_CACHE_ITEM_S_L, S_CACHE_ITEM_F_L);
+                VNUGUI.updateMenuItem(cachedSetting, S_COPY_KEY, copyItem, S_CACHE_COPYNOTES_S_L, S_CACHE_COPYNOTES_F_L);
+
+                setDescription();
+
+                // 如果设置为缓存，则更新相应的文本框和单选按钮
+                if ("Y".equals(cachedSetting.get(S_CACHE_KEY))) {
+                    // 修改描述
+                    String notes = cachedSetting.get(F_NOTES);
+                    if (notes != null && !notes.isEmpty()) {
+                        textField1.setText(notes);
+                    }
+                    // 任务号
+                    String taskNo = cachedSetting.get(F_TASKNO);
+                    if (taskNo != null && !taskNo.isEmpty()) {
+                        textField2.setText(taskNo);
+                    }
+
+                    // 任务类型
+                    String taskType = cachedSetting.get(F_TASKTYPE);
+                    if (taskType != null && !taskType.isEmpty()) {
+                        if (F_TASKTYPE_R_L.equals(taskType)) {
+                            radioButton1.setSelected(true);
+                        } else {
+                            radioButton2.setSelected(true);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 设置处理文件展示
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/28
+     */
+    public void setDescription() {
+        String key = updateItem.isSelected() ? "SYS" : "SELECT";
+        String cacheNotes = updateNotesMap.get(key);
+        if (cacheNotes != null && !cacheNotes.isEmpty()) {
+            descriptionArea.setText(cacheNotes);
+            return;
+        }
+
+        VirtualFile[] files = updateItem.isSelected() ? getFlattenedFiles() : orgFiles;
+        StringBuffer filesDirs = new StringBuffer();
+        AtomicInteger fileNum = new AtomicInteger();
+        // 统计文件和目录数量
+        Stream.of(files).forEach(file -> {
+            fileNum.incrementAndGet();
+        });
+
+        filesDirs.append(F_FILESNUM_K_L + files.length + "," + F_FILE_K_L + fileNum.get() + "\n");
+
+        // 遍历文件数组，记录文件路径
+        Stream.of(files)
+                .filter(file -> !file.isDirectory())
+                .map(VirtualFile::getPath)
+                .forEach(path -> filesDirs.append(path + "\n"));
+
+        updateNotesMap.put(key, filesDirs.toString());
+        descriptionArea.setText(filesDirs.toString());
+    }
+
+    /**
+     * 根据module获取file
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/28
+     *
+     * @return com.intellij.openapi.vfs.VirtualFile[]
+     */
+    public VirtualFile[] getFlattenedFiles() {
+        List<VirtualFile> flattenedList = moduleMap.values().stream()
+                .flatMap(List::stream)
+                .toList();
+        return flattenedList.toArray(new VirtualFile[0]);
+    }
+
+    /**
+     * 展示失败信息
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2024/10/21
+     *
+     * @param e
+     * @param resultObjList
+     */
+    public void showMessageDialog(AnActionEvent e, List<ResultObj> resultObjList, int successNum, int failFileNum) {
+        JFrame frame = new JFrame("错误信息");
+        frame.setSize(900, 800);
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frame.setLayout(new BorderLayout());
+
+        // 说明框
+        StringBuffer messages = new StringBuffer();
+        messages.append(MSG_SUCCESSFILENUM + successNum + "," + MSG_FAILFILENUM + failFileNum + "\n");
+        for (ResultObj resultObj : resultObjList) {
+            if (!resultObj.isOk()) {
+                messages.append(resultObj.getFilePath()).append(":\n").append(resultObj.getMessage()).append("\n");
+            }
+        }
+
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        JLabel label3 = new JLabel(MSG_FAILMSG);
+        centerPanel.add(label3);
+
+        JTextArea descriptionArea = new JTextArea(30, 140);
+        descriptionArea.setEditable(false);
+        descriptionArea.setText(messages.toString());
+        descriptionArea.setCaretPosition(1);
+        JScrollPane scrollPane = new JScrollPane(descriptionArea);
+
+
+        JPanel bottomPanel = new JPanel();
+        JButton confirmButton = new JButton(F_CONFIRM_K_L);
+        bottomPanel.add(confirmButton);
+        confirmButton.addActionListener(subE -> frame.dispose());
+
+        //修改文件
+        JPanel middleContainerPanel = new JPanel();
+        middleContainerPanel.setLayout(new BoxLayout(middleContainerPanel, BoxLayout.Y_AXIS));
+        middleContainerPanel.add(centerPanel);
+        middleContainerPanel.add(scrollPane);
+        frame.add(middleContainerPanel);
+        //确认、取消确认按钮
+        frame.add(bottomPanel, BorderLayout.SOUTH);
+
+        frame.pack();
+
+        // 将窗口显示在屏幕中央
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        int x = (screenSize.width - frame.getWidth()) / 2;
+        int y = (screenSize.height - frame.getHeight()) / 2;
+        frame.setLocation(x, y);
+        frame.setVisible(true);
+    }
+
+    /**
+     * 设置菜单项的点击事件监听器
+     *
+     * @param item           菜单项
+     * @param selectedText   选中时显示的文本
+     * @param unselectedText 未选中时显示的文本
+     * @param cacheKey       缓存键
+     */
+    protected void setupMenuItem(JMenuItem item, String selectedText, String unselectedText, String cacheKey) {
+        item.addActionListener(e -> {
+            // 切换菜单项的勾选状态
+            item.setSelected(!item.isSelected());
+            if (updateItem == item) {
+                setDescription();
+            }
+            if (item.isSelected()) {
+                item.setText(selectedText);
+            } else {
+                item.setText(unselectedText);
+            }
+            printLog(item.getText() + "是否被勾选: " + item.isSelected());
+
+            // 获取缓存管理器实例
+            MyPluginCacheManager setCacheManager = MyPluginCacheManager.getInstance();
+            if (setCacheManager != null) {
+                // 设置缓存的值
+                Map<String, String> cachedFormValue = setCacheManager.getCachedFormValue();
+                if (cachedFormValue == null || cachedFormValue.size() == 0) {
+                    cachedFormValue = new HashMap<>();
+                }
+                if (item.isSelected()) {
+                    cachedFormValue.put(cacheKey, "Y");
+                } else {
+                    cachedFormValue.put(cacheKey, "N");
+                }
+                setCacheManager.setCachedFormValue(cachedFormValue);
+            }
+        });
+    }
+
+    /**
+     * 更新菜单项的选中状态和文本的方法
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/2/24
+     *
+     * @param cachedSetting
+     * @param key
+     * @param menuItem
+     * @param selectedText
+     * @param unselectedText
+     */
+    protected static void updateMenuItem(Map<String, String> cachedSetting, String key, JMenuItem menuItem, String selectedText, String unselectedText) {
+        String value = cachedSetting.get(key);
+        if (value != null && !value.isEmpty()) {
+            if ("Y".equals(value)) {
+                menuItem.setSelected(true);
+                menuItem.setText(selectedText);
+            } else {
+                menuItem.setSelected(false);
+                menuItem.setText(unselectedText);
+            }
+        } else {
+            menuItem.setSelected(false);
+            menuItem.setText(unselectedText);
+        }
+    }
+}
