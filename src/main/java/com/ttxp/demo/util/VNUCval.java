@@ -1,4 +1,4 @@
-package com.ttxp.demo;
+package com.ttxp.demo.util;
 
 /**
  * 常量类
@@ -17,6 +17,25 @@ package com.ttxp.demo;
 public class VNUCval {
 
     /**
+     * 打印日志
+     */
+    public static final boolean logPrint = false;
+
+    /**
+     * 日志打印
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2024/11/15
+     *
+     * @param logs
+     */
+    public static void printLog(String logs) {
+        if (VNUCval.logPrint) {
+            System.out.println(logs);
+        }
+    }
+
+    /**
      * label
      */
     /**
@@ -26,10 +45,11 @@ public class VNUCval {
      * 未选中更新
      */
     public static final String S_UPDATE_ITEM_F_L = "  同步更新UpdateNotes文件";
+    public static final String S_ABOUT_F_L = "操作说明";
     /**
      * 选中更新
      */
-    public static final String S_UPDATE_ITEM_S_L = "√ 同步更新UpdateNotes文件";
+    public static final String S_UPDATE_ITEM_S_L = "* 同步更新UpdateNotes文件";
     /**
      * 未选中缓存
      */
@@ -37,7 +57,23 @@ public class VNUCval {
     /**
      * 选中缓存
      */
-    public static final String S_CACHE_ITEM_S_L = "√ 缓存任务号、修改描述";
+    public static final String S_CACHE_ITEM_S_L = "* 缓存任务号、修改描述";
+    /**
+     * 执行成功复制Notes(git提交)
+     */
+    public static final String S_CACHE_COPYNOTES_F_L = "  执行成功复制Notes(git提交)";
+    /**
+     * 执行成功复制Notes(git提交)
+     */
+    public static final String S_CACHE_COPYNOTES_S_L = "* 执行成功复制Notes(git提交)";
+    /**
+     * 自动跳过文件夹-否
+     */
+    public static final String S_CACHE_SKIPPACKAGE_F_L = "  自动跳过文件夹";
+    /**
+     * 自动跳过文件夹
+     */
+    public static final String S_CACHE_SKIPPACKAGE_S_L = "* 自动跳过文件夹";
 
 
     /**
@@ -71,6 +107,7 @@ public class VNUCval {
      * 设置
      */
     public static final String F_SETTINGS_K_L = "设置";
+    public static final String F_ABOUT_K_L = "关于";
     /**
      * 姓名
      */
@@ -87,6 +124,14 @@ public class VNUCval {
      * 总文件个数：
      */
     public static final String F_FILESNUM_K_L = "总文件个数：";
+    /**
+     * 文件夹个数
+     */
+    public static final String F_DIRECTORY_K_L = "文件夹个数（不支持修改）：";
+    /**
+     * 文件个数
+     */
+    public static final String F_FILE_K_L = "文件个数：";
 
 
     /**
@@ -100,6 +145,14 @@ public class VNUCval {
      * 缓存
      */
     public static final String S_CACHE_KEY = "S_CACHE_KEY";
+    /**
+     * 复制
+     */
+    public static final String S_COPY_KEY = "S_COPY_KEY";
+    /**
+     * 跳过
+     */
+    public static final String S_SKIP_KEY = "S_SKIP_KEY";
 
     /**
      * ----------------表单------------------
@@ -133,6 +186,7 @@ public class VNUCval {
     public static final String MSG_CONFIRM = "注意！确认是否执行更新！！！";
     public static final String MSG_CONFIRM_UPDATE = "已选择同步更新工程UpdateNotes.txt文件！";
     public static final String MSG_SUCCESS = "执行成功！!请检查！!";
+    public static final String MSG_ALLDIRECTORY = "当前选中目录为文件夹！暂不支持！";
     public static final String MSG_SUCCESSFILENUM = "成功文件个数：";
     public static final String MSG_FAILFILENUM = "失败文件个数：";
     public static final String MSG_FAILMSG = "错误信息：";
@@ -140,6 +194,7 @@ public class VNUCval {
     public static final String MSG_208NOTSUPPORT = "暂不支持修改该文件";
     public static final String MSG_NOSTRINGNUM = "未定位到String verNum信息请检查！";
     public static final String MSG_NOVERSIONNUM = "未定位到版本号信息";
+    public static final String MSG_SPLITTASKMSG = "已自动识别:\n";
     public static final String MSG_ADMIN_MAXVERNUM = "未识别出最大版本号";
     public static final String MSG_ADMIN_MAXVERLINENUM = "未找到最大版本号所在行";
     public static final String MSG_ADMIN_VERNUMGEN = "verNum生成失败，请联系管理员检查！";

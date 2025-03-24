@@ -1,16 +1,19 @@
-package com.ttxp.demo;
+package com.ttxp.demo.handlefile;
 
-import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.actionSystem.CommonDataKeys;
-import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
-import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.ttxp.demo.VNUGUI;
+import com.ttxp.demo.util.MyPluginCacheManager;
+import com.ttxp.demo.util.ResultObj;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -18,346 +21,156 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.ttxp.demo.VNUCval.*;
+import static com.ttxp.demo.util.VNUCval.*;
 
 /**
- * 版本号更新
+ * 确认按钮-事件监听-回调
  *
  * <p>
- * 创建时间：2024/10/12
+ * 创建时间：2025/2/24
  * <p>
  *
  * <p>
- * 修改时间：2024/10/12
+ * 修改时间：2025/2/24
  * <p>
  *
  * @author pengtai
  * @version V1.0.0
  */
-public class VersionNumUpdate extends AnAction {
+public class ConfirmButtonListener implements ActionListener {
 
-    /**
-     * 打印日志
-     */
-    private static final boolean logPrint = false;
+    private AnActionEvent e;
+    private VNUGUI vnugui;
 
-    @Override
-    public void actionPerformed(AnActionEvent e) {
-        // 获取当前项目实例
-        Project project = e.getProject();
-        if (project == null) {
-            return; // 如果没有项目打开，则直接返回
-        }
-
-        // 从事件的数据上下文中获取当前选中的文件数组
-        VirtualFile[] files = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY);
-
-        if (files == null) {
-            Messages.showMessageDialog(e.getProject(), MSG_NOCHECKED, MSG_MESSGE, Messages.getInformationIcon());
-            return;
-        }
-
-        FileDocumentManager.getInstance().saveAllDocuments();
-
-        showDialog(e, files);
+    public ConfirmButtonListener(AnActionEvent e, VNUGUI vnugui) {
+        this.e = e;
+        this.vnugui = vnugui;
     }
 
 
-    /**
-     * 展示二级框
-     *
-     * <p>Author: pengtai
-     * <p>Create Time:2024/10/11
-     *
-     * @param e
-     * @param files
-     */
-    private void showDialog(AnActionEvent e, VirtualFile[] files) {
+    @Override
+    public void actionPerformed(ActionEvent e1) {
+        VirtualFile[] files = vnugui.updateItem.isSelected() ? vnugui.getFlattenedFiles() : vnugui.orgFiles;
+        String taskType;
+        // 默认选择“任务”
+        if (vnugui.radioButton2.isSelected()) {
+            taskType = F_TASKTYPE_K_L;
+        } else {
+            taskType = F_TASKTYPE_R_L;
+        }
 
-        // 二级框
-        JFrame frame = new JFrame(F_TITLE_K_L);
-        frame.setSize(800, 300);
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setLayout(new BorderLayout());
+        // 在这里执行你的具体操作
+        String msg = vnugui.textField1.getText();
+        String taskNo = vnugui.textField2.getText();
+        String userName = vnugui.textField4.getText();
+        if (userName == null || userName.trim().length() == 0) {
+            Messages.showInfoMessage(MSG_200USERNAME, MSG_MESSGE);
+            return;
+        }
+        if (msg == null || msg.trim().length() == 0) {
+            Messages.showInfoMessage(MSG_200NOTES, MSG_MESSGE);
+            return;
+        }
+        if (taskNo == null || taskNo.trim().length() == 0) {
+            Messages.showInfoMessage(MSG_200RORK, MSG_MESSGE);
+            return;
+        }
 
-        // 创建菜单栏
-        JMenuBar menuBar = new JMenuBar();
+        // 显示表单对话框
+        int result = JOptionPane.showConfirmDialog(null,  MSG_CONFIRM, "Confirmation", JOptionPane.OK_CANCEL_OPTION);
+        if (result == JOptionPane.OK_OPTION) {
+            // 用户点击了确认按钮，执行实际的操作
+            Project project = e.getProject();
+            if (project != null) {
+                // 输出日志
+                printLog(F_USERNAME_K_L + userName);
+                printLog(F_UPDATEMSG_K_L + msg);
+                printLog(F_RORK_K_L + taskNo);
 
-        // 创建文件菜单及其菜单项
-        JMenu fileMenu = new JMenu(F_SETTINGS_K_L);
-        JMenuItem updateItem = new JMenuItem(S_UPDATE_ITEM_F_L);
-        JMenuItem cacheItem = new JMenuItem(S_CACHE_ITEM_F_L);
-        fileMenu.add(updateItem);
-        fileMenu.add(cacheItem);
-        // 将文件菜单和帮助菜单添加到菜单栏
-        menuBar.add(fileMenu);
-        // 将菜单栏添加到JFrame
-        frame.setJMenuBar(menuBar);
-
-        // 监听设置中按钮状态
-        updateItem.addActionListener(e13 -> {
-            // 切换菜单项的勾选状态
-            updateItem.setSelected(!updateItem.isSelected());
-            if (updateItem.isSelected()) {
-                updateItem.setText(S_UPDATE_ITEM_S_L);
-            } else {
-                updateItem.setText(S_UPDATE_ITEM_F_L);
-            }
-            printLog("updateItem是否被勾选: " + updateItem.isSelected());
-
-            // 获取缓存管理器实例
-            MyPluginCacheManager setCacheManager = MyPluginCacheManager.getInstance();
-            if (setCacheManager != null) {
-                // 设置缓存的值
-                Map<String, String> cachedFormValue = setCacheManager.getCachedFormValue();
-                if (cachedFormValue == null || cachedFormValue.size() == 0) {
-                    cachedFormValue = new HashMap<>();
-                }
-                if (updateItem.isSelected()) {
-                    cachedFormValue.put(S_UPDATE_KEY, "Y");
-                } else {
-                    cachedFormValue.put(S_UPDATE_KEY, "N");
-                }
-                setCacheManager.setCachedFormValue(cachedFormValue);
-            }
-        });
-        // 是否缓存任务号、修改描述
-        cacheItem.addActionListener(e12 -> {
-            // 切换菜单项的勾选状态
-            cacheItem.setSelected(!cacheItem.isSelected());
-            if (cacheItem.isSelected()) {
-                cacheItem.setText(S_CACHE_ITEM_S_L);
-            } else {
-                cacheItem.setText(S_CACHE_ITEM_F_L);
-            }
-            printLog("cacheItem是否被勾选: " + updateItem.isSelected());
-
-            // 获取缓存管理器实例
-            MyPluginCacheManager setCacheManager = MyPluginCacheManager.getInstance();
-            if (setCacheManager != null) {
-                // 设置缓存的值
-                Map<String, String> cachedFormValue = setCacheManager.getCachedFormValue();
-                if (cachedFormValue == null || cachedFormValue.size() == 0) {
-                    cachedFormValue = new HashMap<>();
-                }
-                if (cacheItem.isSelected()) {
-                    cachedFormValue.put(S_CACHE_KEY, "Y");
-                } else {
-                    cachedFormValue.put(S_CACHE_KEY, "N");
-                }
-                setCacheManager.setCachedFormValue(cachedFormValue);
-            }
-        });
-
-        // 姓名、修改描述、任务号
-        JPanel topPanel = new JPanel();
-        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
-
-        // 姓名
-        JPanel topPanelName = new JPanel(new GridBagLayout());
-        JLabel label4 = new JLabel(F_USERNAME_K_L);
-        label4.setPreferredSize(new Dimension(80, 30));
-        JTextField textField4 = new JTextField();
-        topPanelName.add(label4);
-        GridBagConstraints c4 = new GridBagConstraints();
-        c4.fill = GridBagConstraints.HORIZONTAL;
-        c4.weightx = 1.0;
-        topPanelName.add(textField4, c4);
-
-        // 修改描述
-        JPanel topPanelMsg = new JPanel(new GridBagLayout());
-        JLabel label1 = new JLabel(F_UPDATEMSG_K_L);
-        label1.setPreferredSize(new Dimension(80, 30));
-        JTextField textField1 = new JTextField(30);
-        topPanelMsg.add(label1);
-        GridBagConstraints c1 = new GridBagConstraints();
-        c1.fill = GridBagConstraints.HORIZONTAL;
-        c1.weightx = 1.0;
-        topPanelMsg.add(textField1, c1);
-
-        // 任务号
-        JPanel topPanelTaskNo = new JPanel(new GridBagLayout());
-        JLabel label2 = new JLabel(F_RORK_K_L);
-        label2.setPreferredSize(new Dimension(80, 30));
-        JTextField textField2 = new JTextField(30);
-        topPanelTaskNo.add(label2);
-        GridBagConstraints c2 = new GridBagConstraints();
-        c2.fill = GridBagConstraints.HORIZONTAL;
-        c2.weightx = 1.0;
-        topPanelTaskNo.add(textField2, c2);
-
-        // 单选框
-        // 任务
-        JPanel panel = new JPanel();
-        panel.setLayout(new GridBagLayout());
-        JPanel leftPanel = new JPanel();
-        leftPanel.setLayout(new GridBagLayout());
-        JRadioButton radioButton1 = new JRadioButton(F_TASKTYPE_R_L);
-        radioButton1.setSelected(true);
-        leftPanel.add(radioButton1);
-        // 客服
-        JPanel rightPanel = new JPanel();
-        rightPanel.setLayout(new GridBagLayout());
-        JRadioButton radioButton2 = new JRadioButton(F_TASKTYPE_K_L);
-        rightPanel.add(radioButton2);
-
-        // 设置单选框位置
-        GridBagConstraints left = new GridBagConstraints();
-        left.gridx = 0;
-        left.weightx = 0.5;
-        left.fill = GridBagConstraints.CENTER;
-        GridBagConstraints right = new GridBagConstraints();
-        right.gridx = 1;
-        right.weightx = 0.5;
-        right.fill = GridBagConstraints.CENTER;
-        panel.add(leftPanel, left);
-        panel.add(rightPanel, right);
-
-        ButtonGroup buttonGroup = new ButtonGroup();
-        buttonGroup.add(radioButton1);
-        buttonGroup.add(radioButton2);
-
-        topPanel.add(topPanelName);
-        topPanel.add(topPanelMsg);
-        topPanel.add(topPanelTaskNo);
-        topPanel.add(panel, BorderLayout.CENTER);
-
-        // 说明框
-        StringBuffer filesDirs = new StringBuffer();
-        filesDirs.append(F_FILESNUM_K_L + files.length + "\n");
-        HashSet<String> containsUpdateNotes = new HashSet<>();
-        Arrays.stream(files).forEach(file -> {
-            String path = file.getPath();
-            if (path.contains("UpdateNotes.txt")) {
-                containsUpdateNotes.add(path);
-            }
-            filesDirs.append(path + "\n");
-        });
-
-
-        // 修改文件展示框
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-        JLabel label3 = new JLabel(F_UPDATEFILES_K_L);
-        centerPanel.add(label3);
-        JTextArea descriptionArea = new JTextArea(15, 130);
-        descriptionArea.setEditable(false);
-        descriptionArea.setText(filesDirs.toString());
-        descriptionArea.setCaretPosition(1);
-        JScrollPane scrollPane = new JScrollPane(descriptionArea);
-
-        // 底部按钮（确认、取消）
-        JPanel bottomPanel = new JPanel();
-        // 确认
-        JButton confirmButton = new JButton(F_CONFIRM_K_L);
-        // 取消
-        JButton cancelButton = new JButton(F_CANCEL_K_L);
-        bottomPanel.add(confirmButton);
-        bottomPanel.add(cancelButton);
-        confirmButton.addActionListener(subE -> {
-
-            String taskType;
-            // 默认选择“任务”
-            if (radioButton2.isSelected()) {
-                taskType = F_TASKTYPE_K_L;
-            } else {
-                taskType = F_TASKTYPE_R_L;
-            }
-
-            // 在这里执行你的具体操作
-            String msg = textField1.getText();
-            String taskNo = textField2.getText();
-            String userName = textField4.getText();
-            if (userName == null || userName.trim().length() == 0) {
-                Messages.showInfoMessage(MSG_200USERNAME, MSG_MESSGE);
-                return;
-            }
-            if (msg == null || msg.trim().length() == 0) {
-                Messages.showInfoMessage(MSG_200NOTES, MSG_MESSGE);
-                return;
-            }
-            if (taskNo == null || taskNo.trim().length() == 0) {
-                Messages.showInfoMessage(MSG_200RORK, MSG_MESSGE);
-                return;
-            }
-
-            // 显示表单对话框
-            int result = JOptionPane.showConfirmDialog(null, (updateItem.isSelected() ? MSG_CONFIRM_UPDATE + "\n" : "") + MSG_CONFIRM, "Confirmation", JOptionPane.OK_CANCEL_OPTION);
-            if (result == JOptionPane.OK_OPTION) {
-                // 用户点击了确认按钮，执行实际的操作
-                Project project = e.getProject();
-                if (project != null) {
-                    // 输出日志
-                    printLog(F_USERNAME_K_L + userName);
-                    printLog(F_UPDATEMSG_K_L + msg);
-                    printLog(F_RORK_K_L + taskNo);
-
-                    // 获取缓存管理器实例
-                    MyPluginCacheManager setCacheManager = MyPluginCacheManager.getInstance();
-                    if (setCacheManager != null) {
-                        // 设置缓存的值
-                        Map<String, String> cachedFormValue = setCacheManager.getCachedFormValue();
-                        if (cachedFormValue == null || cachedFormValue.size() == 0) {
-                            cachedFormValue = new HashMap<>();
-                        }
-                        cachedFormValue.put(F_USERNAME, userName);
-                        cachedFormValue.put(F_NOTES, msg);
-                        cachedFormValue.put(F_TASKNO, taskNo);
-                        cachedFormValue.put(F_TASKTYPE, taskType);
-                        setCacheManager.setCachedFormValue(cachedFormValue);
+                // 获取缓存管理器实例
+                MyPluginCacheManager setCacheManager = MyPluginCacheManager.getInstance();
+                if (setCacheManager != null) {
+                    // 设置缓存的值
+                    Map<String, String> cachedFormValue = setCacheManager.getCachedFormValue();
+                    if (cachedFormValue == null || cachedFormValue.size() == 0) {
+                        cachedFormValue = new HashMap<>();
                     }
+                    cachedFormValue.put(F_USERNAME, userName);
+                    cachedFormValue.put(F_NOTES, msg);
+                    cachedFormValue.put(F_TASKNO, taskNo);
+                    cachedFormValue.put(F_TASKTYPE, taskType);
+                    setCacheManager.setCachedFormValue(cachedFormValue);
+                }
 
-                    // 循环所有文件依次处理
-                    List<ResultObj> resultList = new ArrayList<>();
-                    AtomicBoolean hasErr = new AtomicBoolean(false);
-                    AtomicInteger failFileNum = new AtomicInteger();
-                    AtomicInteger successFileNum = new AtomicInteger();
-                    Arrays.stream(files).forEach(file -> {
-                        String path = file.getPath();
-                        if (file.isDirectory()) {
-                            ResultObj resultObj = new ResultObj();
-                            resultObj.setOk(false);
-                            resultObj.setFilePath(path);
-                            resultObj.setMessage(MSG_ISDISTORY);
-                            failFileNum.set(failFileNum.get() + 1);
-                            hasErr.set(true);
-                            resultList.add(resultObj);
-                            return;
-                        }
-                        Map<String, String> maxVersionNumAndLine = new HashMap<>();
-                        ResultObj resultObj = getMaxVersionNum(path, userName, maxVersionNumAndLine);
-                        if (!resultObj.isOk()) {
-                            hasErr.set(true);
-                            resultList.add(resultObj);
-                            failFileNum.set(failFileNum.get() + 1);
-                            return;
-                        }
-                        ResultObj resultObj1 = insertNewVersionByNewFile(path, maxVersionNumAndLine, msg, taskNo, taskType);
-                        if (!resultObj1.isOk()) {
-                            hasErr.set(true);
-                            resultList.add(resultObj1);
-                            failFileNum.set(failFileNum.get() + 1);
-                            return;
-                        } else {
-                            resultList.add(resultObj1);
-                            successFileNum.set(successFileNum.get() + 1);
-                        }
-                        file.refresh(false, false);
-                    });
+                // 循环所有文件依次处理
+                java.util.List<ResultObj> resultList = new ArrayList<>();
+                AtomicBoolean hasErr = new AtomicBoolean(false);
+                AtomicInteger failFileNum = new AtomicInteger();
+                AtomicInteger successFileNum = new AtomicInteger();
+                Arrays.stream(files).forEach(file -> {
+                    String path = file.getPath();
+                    if (file.isDirectory()) {
+                        ResultObj resultObj = new ResultObj();
+                        resultObj.setOk(true);
+                        resultObj.setFilePath(path);
+                        successFileNum.set(successFileNum.get() + 1);
+                        resultList.add(resultObj);
+                        return;
+                    }
+                    Map<String, String> maxVersionNumAndLine = new HashMap<>();
+                    ResultObj resultObj = getMaxVersionNum(path, userName, maxVersionNumAndLine);
+                    if (!resultObj.isOk()) {
+                        hasErr.set(true);
+                        resultList.add(resultObj);
+                        failFileNum.set(failFileNum.get() + 1);
+                        return;
+                    }
+                    ResultObj resultObj1 = insertNewVersionByNewFile(path, maxVersionNumAndLine, msg, taskNo, taskType);
+                    if (!resultObj1.isOk()) {
+                        hasErr.set(true);
+                        resultList.add(resultObj1);
+                        failFileNum.set(failFileNum.get() + 1);
+                        return;
+                    } else {
+                        resultList.add(resultObj1);
+                        successFileNum.set(successFileNum.get() + 1);
+                    }
+                    file.refresh(false, false);
+                });
 
-                    // 判断是否需要同步更新updateNotes
-                    if (updateItem.isSelected()) {
-                        HashSet<String> dictorys = new HashSet<>();
-                        for (ResultObj resultObj : resultList) {
-                            if (resultObj.isOk()) {
-                                String filePath = resultObj.getFilePath();
+
+                if (vnugui.copyItem.isSelected()) {
+                    for (ResultObj resultObj : resultList) {
+                        if (resultObj.isOk()) {
+                            // 获取系统剪贴板实例
+                            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                            // 要复制到剪贴板的文本内容
+                            String textToCopy = msg + "," + taskType + "：" + taskNo;
+                            // 创建一个StringSelection对象，用于包装要复制的字符串
+                            StringSelection selection = new StringSelection(textToCopy);
+                            // 将包装好的内容设置到剪贴板中
+                            clipboard.setContents(selection, null);
+                            break;
+                        }
+                    }
+                }
+
+                // 判断是否需要同步更新updateNotes
+                /*if (vnugui.updateItem.isSelected()) {
+                    HashSet<String> directorys = new HashSet<>();
+                    for (ResultObj resultObj : resultList) {
+                        if (resultObj.isOk()) {
+                            String filePath = resultObj.getFilePath();
+                            if (filePath != null && filePath.length() > 0) {
                                 String[] pattern = {"/src/main/webapp/", "/src/main/resources/", "/src/main/java/"};
                                 String projectPath = "";
                                 for (String s : pattern) {
@@ -366,218 +179,71 @@ public class VersionNumUpdate extends AnAction {
                                         projectPath = filePath.substring(0, i);
                                     }
                                 }
-                                dictorys.add(projectPath + "/src/main/resources/updatenotes/UpdateNotes.txt");
-                            }
-                        }
-                        printLog("search updateNotes dictory:" + dictorys.toString());
-                        printLog("updateNotes dictory:" + containsUpdateNotes.toString());
-
-                        // 去重
-                        HashSet<String> distinctDictorys = new HashSet<>();
-                        for (String dictory : dictorys) {
-                            boolean contains = false;
-                            for (String containsUpdateNote : containsUpdateNotes) {
-                                if (containsUpdateNote.equals(dictory)) {
-                                    contains = true;
-                                    break;
+                                if (projectPath != null && projectPath.length() > 0) {
+                                    directorys.add(projectPath + "/src/main/resources/updatenotes/UpdateNotes.txt");
                                 }
                             }
-                            if (!contains) {
-                                distinctDictorys.add(dictory);
+
+                        }
+                    }
+                    printLog("search updateNotes dictory:" + directorys.toString());
+                    printLog("updateNotes dictory:" + containsUpdateNotes.toString());
+
+                    // 去重
+                    HashSet<String> distinctDirectorys = new HashSet<>();
+                    for (String dictory : directorys) {
+                        boolean contains = false;
+                        for (String containsUpdateNote : containsUpdateNotes) {
+                            if (containsUpdateNote.equals(dictory)) {
+                                contains = true;
+                                break;
                             }
                         }
-                        printLog("distinct updateNotes dictory:" + distinctDictorys.toString());
+                        if (!contains) {
+                            distinctDirectorys.add(dictory);
+                        }
+                    }
+                    printLog("distinct updateNotes dictory:" + distinctDirectorys.toString());
 
-                        // 更新UpdateNotes
-                        for (String filePath : distinctDictorys) {
-                            Map<String, String> maxVersionNumAndLine = new HashMap<>();
-                            ResultObj resultObj = getMaxVersionNum(filePath, userName, maxVersionNumAndLine);
-                            if (!resultObj.isOk()) {
-                                hasErr.set(true);
-                                resultList.add(resultObj);
-                                failFileNum.set(failFileNum.get() + 1);
-                                continue;
-                            }
-                            ResultObj resultObj1 = insertNewVersionByNewFile(filePath, maxVersionNumAndLine, msg, taskNo, taskType);
-                            if (!resultObj1.isOk()) {
-                                hasErr.set(true);
-                                resultList.add(resultObj1);
-                                failFileNum.set(failFileNum.get() + 1);
-                                continue;
-                            } else {
-                                resultList.add(resultObj1);
-                                successFileNum.set(successFileNum.get() + 1);
-                                VirtualFile virtualFile = VfsUtil.findFileByIoFile(new java.io.File(filePath), true);
-                                if (virtualFile != null) {
-                                    virtualFile.refresh(false, false);
-                                }
+                    // 更新UpdateNotes
+                    for (String filePath : distinctDirectorys) {
+                        Map<String, String> maxVersionNumAndLine = new HashMap<>();
+                        ResultObj resultObj = getMaxVersionNum(filePath, userName, maxVersionNumAndLine);
+                        if (!resultObj.isOk()) {
+                            hasErr.set(true);
+                            resultList.add(resultObj);
+                            failFileNum.set(failFileNum.get() + 1);
+                            continue;
+                        }
+                        ResultObj resultObj1 = insertNewVersionByNewFile(filePath, maxVersionNumAndLine, msg, taskNo, taskType);
+                        if (!resultObj1.isOk()) {
+                            hasErr.set(true);
+                            resultList.add(resultObj1);
+                            failFileNum.set(failFileNum.get() + 1);
+                            continue;
+                        } else {
+                            resultList.add(resultObj1);
+                            successFileNum.set(successFileNum.get() + 1);
+                            VirtualFile virtualFile = VfsUtil.findFileByIoFile(new File(filePath), true);
+                            if (virtualFile != null) {
+                                virtualFile.refresh(false, false);
                             }
                         }
-
                     }
 
-                    // 判断是否有报错返回展示对应信息
-                    if (hasErr.get()) {
-                        showMessageDialog(e, resultList, successFileNum.get(), failFileNum.get());
-                    } else {
-                        Messages.showInfoMessage(MSG_SUCCESS, MSG_MESSGE);
-                    }
-                    frame.dispose();
-                }
-            }
+                }*/
 
-
-        });
-
-        cancelButton.addActionListener(e1 -> frame.dispose());
-
-        //姓名，修改描述，任务号
-        frame.add(topPanel, BorderLayout.NORTH);
-        //修改文件
-        JPanel middleContainerPanel = new JPanel();
-        middleContainerPanel.setLayout(new BoxLayout(middleContainerPanel, BoxLayout.Y_AXIS));
-        middleContainerPanel.add(centerPanel);
-        middleContainerPanel.add(scrollPane);
-        frame.add(middleContainerPanel);
-        //确认、取消确认按钮
-        frame.add(bottomPanel, BorderLayout.SOUTH);
-        frame.pack();
-
-        // 将窗口显示在屏幕中央
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        int x = (screenSize.width - frame.getWidth()) / 2;
-        int y = (screenSize.height - frame.getHeight()) / 2;
-        frame.setLocation(x, y);
-
-        // 获取缓存管理器实例
-        // 临时存储使用，当关闭IDEA后存储数据会清空，此方法弃用
-        MyPluginCacheManager cacheManager = MyPluginCacheManager.getInstance();
-        if (cacheManager != null) {
-            Map<String, String> cachedSetting = cacheManager.getCachedFormValue();
-            if (cachedSetting != null && cachedSetting.size() > 0) {
-                // 从缓存中取userName
-                String userName = cachedSetting.get(F_USERNAME);
-                if (userName != null && userName.length() > 0) {
-                    textField4.setText(userName);
-                    // 进行一些操作，比如输出缓存的值
-                    printLog("Cached setting: " + cachedSetting);
-                    textField1.requestFocus();
-                }
-
-                // 是否更新
-                String update = cachedSetting.get(S_UPDATE_KEY);
-                if (update != null && update.length() > 0) {
-                    if ("Y".equals(update)) {
-                        updateItem.setSelected(true);
-                        updateItem.setText(S_UPDATE_ITEM_S_L);
-                    } else {
-                        updateItem.setSelected(false);
-                        updateItem.setText(S_UPDATE_ITEM_F_L);
-                    }
+                // 判断是否有报错返回展示对应信息
+                if (hasErr.get()) {
+                    vnugui.showMessageDialog(e, resultList, successFileNum.get(), failFileNum.get());
                 } else {
-                    updateItem.setSelected(false);
-                    updateItem.setText(S_UPDATE_ITEM_F_L);
+                    Messages.showInfoMessage(MSG_SUCCESS, MSG_MESSGE);
                 }
-
-                // 是否缓存
-                String cache = cachedSetting.get(S_CACHE_KEY);
-                if (cache != null && cache.length() > 0) {
-                    if ("Y".equals(cache)) {
-                        cacheItem.setSelected(true);
-                        cacheItem.setText(S_CACHE_ITEM_S_L);
-                        // 修改描述
-                        String notes = cachedSetting.get(F_NOTES);
-                        if (notes != null && notes.length() > 0) {
-                            textField1.setText(notes);
-                        }
-                        //任务号
-                        String taskNo = cachedSetting.get(F_TASKNO);
-                        if (taskNo != null && taskNo.length() > 0) {
-                            textField2.setText(taskNo);
-                        }
-
-                        // 任务类型
-                        String taskType = cachedSetting.get(F_TASKTYPE);
-                        if (taskType != null && taskType.length() > 0) {
-                            if (F_TASKTYPE_R_L.equals(taskType)) {
-                                radioButton1.setSelected(true);
-                            } else {
-                                radioButton2.setSelected(true);
-                            }
-                        }
-
-                    } else {
-                        cacheItem.setSelected(false);
-                        cacheItem.setText(S_CACHE_ITEM_F_L);
-                    }
-                } else {
-                    cacheItem.setSelected(false);
-                    cacheItem.setText(S_CACHE_ITEM_F_L);
-                }
+                vnugui.frame.dispose();
             }
         }
 
-        frame.setVisible(true);
-    }
 
-    /**
-     * 展示失败信息
-     *
-     * <p>Author: pengtai
-     * <p>Create Time:2024/10/21
-     *
-     * @param e
-     * @param resultObjList
-     */
-    private void showMessageDialog(AnActionEvent e, List<ResultObj> resultObjList, int successNum, int failFileNum) {
-        JFrame frame = new JFrame("错误信息");
-        frame.setSize(900, 800);
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setLayout(new BorderLayout());
-
-        // 说明框
-        StringBuffer messages = new StringBuffer();
-        messages.append(MSG_SUCCESSFILENUM + successNum + "," + MSG_FAILFILENUM + failFileNum + "\n");
-        for (ResultObj resultObj : resultObjList) {
-            if (!resultObj.isOk()) {
-                messages.append(resultObj.getFilePath()).append(":\n").append(resultObj.getMessage()).append("\n");
-            }
-        }
-
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-        JLabel label3 = new JLabel(MSG_FAILMSG);
-        centerPanel.add(label3);
-
-        JTextArea descriptionArea = new JTextArea(30, 140);
-        descriptionArea.setEditable(false);
-        descriptionArea.setText(messages.toString());
-        descriptionArea.setCaretPosition(1);
-        JScrollPane scrollPane = new JScrollPane(descriptionArea);
-
-
-        JPanel bottomPanel = new JPanel();
-        JButton confirmButton = new JButton(F_CONFIRM_K_L);
-        bottomPanel.add(confirmButton);
-        confirmButton.addActionListener(subE -> frame.dispose());
-
-        //修改文件
-        JPanel middleContainerPanel = new JPanel();
-        middleContainerPanel.setLayout(new BoxLayout(middleContainerPanel, BoxLayout.Y_AXIS));
-        middleContainerPanel.add(centerPanel);
-        middleContainerPanel.add(scrollPane);
-        frame.add(middleContainerPanel);
-        //确认、取消确认按钮
-        frame.add(bottomPanel, BorderLayout.SOUTH);
-
-        frame.pack();
-
-        // 将窗口显示在屏幕中央
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        int x = (screenSize.width - frame.getWidth()) / 2;
-        int y = (screenSize.height - frame.getHeight()) / 2;
-        frame.setLocation(x, y);
-        frame.setVisible(true);
     }
 
     /**
@@ -894,6 +560,47 @@ public class VersionNumUpdate extends AnAction {
         return resultObj;
     }
 
+    /**
+     * 拼接新的versionNum
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2024/10/14
+     *
+     * @param maxVersion
+     * @param indexs
+     * @return java.lang.String
+     */
+    public static String genNewVersion(String maxVersion, ArrayList<Integer> indexs) {
+        String maxVersionTmp = maxVersion;
+        for (int i = 0; i < indexs.size(); i++) {
+            int index = indexs.get(i);
+            maxVersionTmp = maxVersionTmp.substring(0, index) + "." + maxVersionTmp.substring(index);
+        }
+        return maxVersionTmp;
+    }
+
+    /**
+     * 获取所有"."的位置
+     * <p>
+     * " * V5.1.6(20241014) pengtai      "->[5, 7]
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2024/10/14
+     *
+     * @param jsGroup
+     * @param indexs
+     * @param nowIndex
+     */
+    public static void getJsSplitIndex(String jsGroup, ArrayList<Integer> indexs, int nowIndex) {
+        if (nowIndex < jsGroup.length()) {
+            int i = jsGroup.indexOf(".", nowIndex);
+            if (i == -1) {
+                return;
+            }
+            indexs.add(Integer.valueOf(i));
+            getJsSplitIndex(jsGroup, indexs, i + 1);
+        }
+    }
 
     /**
      * 新增记录行和编辑记录行
@@ -1120,60 +827,4 @@ public class VersionNumUpdate extends AnAction {
                 StandardCopyOption.REPLACE_EXISTING);
     }
 
-    /**
-     * 获取所有"."的位置
-     * <p>
-     * " * V5.1.6(20241014) pengtai      "->[5, 7]
-     *
-     * <p>Author: pengtai
-     * <p>Create Time:2024/10/14
-     *
-     * @param jsGroup
-     * @param indexs
-     * @param nowIndex
-     */
-    public static void getJsSplitIndex(String jsGroup, ArrayList<Integer> indexs, int nowIndex) {
-        if (nowIndex < jsGroup.length()) {
-            int i = jsGroup.indexOf(".", nowIndex);
-            if (i == -1) {
-                return;
-            }
-            indexs.add(i);
-            getJsSplitIndex(jsGroup, indexs, i + 1);
-        }
-    }
-
-
-    /**
-     * 拼接新的versionNum
-     *
-     * <p>Author: pengtai
-     * <p>Create Time:2024/10/14
-     *
-     * @param maxVersion
-     * @param indexs
-     * @return java.lang.String
-     */
-    public static String genNewVersion(String maxVersion, ArrayList<Integer> indexs) {
-        String maxVersionTmp = maxVersion;
-        for (int i = 0; i < indexs.size(); i++) {
-            int index = indexs.get(i);
-            maxVersionTmp = maxVersionTmp.substring(0, index) + "." + maxVersionTmp.substring(index);
-        }
-        return maxVersionTmp;
-    }
-
-    /**
-     * 日志打印
-     *
-     * <p>Author: pengtai
-     * <p>Create Time:2024/11/15
-     *
-     * @param logs
-     */
-    public static void printLog(String logs) {
-        if (logPrint) {
-            System.out.println(logs);
-        }
-    }
 }
