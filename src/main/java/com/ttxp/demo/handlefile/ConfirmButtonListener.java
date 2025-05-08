@@ -716,7 +716,7 @@ public class ConfirmButtonListener implements ActionListener {
             String containsFinal = maxVersionNumAndLine.get("containsFinal");
             String verNumNewLine = "";
             String finalStr = "Y".equals(containsFinal) ? " final" : "";
-            verNumNewLine = "    " + priStr + " static" + finalStr + " String verNum = \"" + versionNum + "\";// 版本号";
+            verNumNewLine = "    " + priStr + " static" + finalStr + " String verNum = \"" + versionNum + "\";";
 
             int totalLines = 0;
             try {
