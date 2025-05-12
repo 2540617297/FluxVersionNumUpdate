@@ -188,7 +188,7 @@ public class VNUGUI {
             // 获取模块对应的虚拟文件列表
             List<VirtualFile> virtualFiles = moduleMap.get(module);
             // 检查是否存在名为"UpdateNotes.txt"的文件
-            Optional<VirtualFile> optionalVirtualFile = virtualFiles.stream().filter(virtualFile -> virtualFile.getName().equalsIgnoreCase("UpdateNotes.txt")).findAny();
+            Optional<VirtualFile> optionalVirtualFile = virtualFiles.stream().filter(virtualFile -> "UpdateNotes.txt".equalsIgnoreCase(virtualFile.getName())).findAny();
             // 如果不存在
             if (!optionalVirtualFile.isPresent()) {
                 // 获取当前模块的根模型
