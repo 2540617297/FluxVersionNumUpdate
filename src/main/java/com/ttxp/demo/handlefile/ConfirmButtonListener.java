@@ -309,6 +309,7 @@ public class ConfirmButtonListener implements ActionListener {
                 String versionNum = "";
                 String beforeMsg = "";
                 String line;
+                String verNum = "";
                 while ((line = reader.readLine()) != null) {
                     lineNumber++;
                     Matcher matcher1 = partten1.matcher(line);
@@ -318,11 +319,16 @@ public class ConfirmButtonListener implements ActionListener {
 
                     // public static final String verNum
                     // private static final String verNum
-                    if (line.contains("String verNum ") &&
+                    if ((line.contains("String verNum ") || line.contains("String VERNUM ")) &&
                             ((line.trim().startsWith("private") && line.contains("private static"))
                                     || (line.trim().startsWith("public") && line.contains("public static"))
                                     || (line.trim().startsWith("protected") && line.contains("protected static"))
                             )) {
+                        if(line.contains("String verNum ")){
+                            verNum = "verNum";
+                        }else{
+                            verNum = "VERNUM";
+                        }
                         verNumLineNumber = lineNumber;
                         if (line.contains("final")) {
                             containsFinal = "Y";
@@ -362,7 +368,7 @@ public class ConfirmButtonListener implements ActionListener {
 
                     }
 
-                    if ((line.contains("String verNum ") && ((line.trim().startsWith("private") && line.contains("private static"))
+                    if (((line.contains("String verNum ") || line.contains("String VERNUM ")) && ((line.trim().startsWith("private") && line.contains("private static"))
                             || (line.trim().startsWith("public") && line.contains("public static"))
                             || (line.trim().startsWith("protected") && line.contains("protected static"))))
                             || line.contains("@Autowired") || (line.contains("define") && !line.contains("defined"))
@@ -538,6 +544,7 @@ public class ConfirmButtonListener implements ActionListener {
                 maxVersionNumAndLine.put("vType", vType);
                 maxVersionNumAndLine.put("containsFinal", containsFinal);
                 maxVersionNumAndLine.put("priStr", priStr);
+                maxVersionNumAndLine.put("verNum", verNum);
             } catch (IOException e) {
                 if (logPrint) {
                     e.printStackTrace();
@@ -716,7 +723,9 @@ public class ConfirmButtonListener implements ActionListener {
             String containsFinal = maxVersionNumAndLine.get("containsFinal");
             String verNumNewLine = "";
             String finalStr = "Y".equals(containsFinal) ? " final" : "";
-            verNumNewLine = "    " + priStr + " static" + finalStr + " String verNum = \"" + versionNum + "\";// 版本号";
+            String verNum = maxVersionNumAndLine.get("verNum");
+            verNum = verNum == null || "".equals(verNum) ? "verNum" : verNum;
+            verNumNewLine = "    " + priStr + " static" + finalStr + " String "+verNum+" = \"" + versionNum + "\";";
 
             int totalLines = 0;
             try {
