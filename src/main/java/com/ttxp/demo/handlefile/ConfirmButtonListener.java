@@ -86,7 +86,7 @@ public class ConfirmButtonListener implements ActionListener {
         }
 
         // 显示表单对话框
-        int result = JOptionPane.showConfirmDialog(null,  MSG_CONFIRM, "Confirmation", JOptionPane.OK_CANCEL_OPTION);
+        int result = JOptionPane.showConfirmDialog(null, MSG_CONFIRM, "Confirmation", JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
             // 用户点击了确认按钮，执行实际的操作
             Project project = e.getProject();
@@ -303,13 +303,11 @@ public class ConfirmButtonListener implements ActionListener {
                 // VXXX(XXXXXXXX)所在行数据
                 String maxVersionLineStr = "";
                 // String verNum所在行是否包含final
-                String containsFinal = "";
-                String priStr = "";
+                String verNumLine = "";
                 // 中间符
                 String versionNum = "";
                 String beforeMsg = "";
                 String line;
-                String verNum = "";
                 while ((line = reader.readLine()) != null) {
                     lineNumber++;
                     Matcher matcher1 = partten1.matcher(line);
@@ -319,27 +317,16 @@ public class ConfirmButtonListener implements ActionListener {
 
                     // public static final String verNum
                     // private static final String verNum
-                    if ((line.contains("String verNum ") || line.contains("String VERNUM ")) &&
-                            ((line.trim().startsWith("private") && line.contains("private static"))
-                                    || (line.trim().startsWith("public") && line.contains("public static"))
-                                    || (line.trim().startsWith("protected") && line.contains("protected static"))
-                            )) {
-                        if(line.contains("String verNum ")){
-                            verNum = "verNum";
-                        }else{
-                            verNum = "VERNUM";
-                        }
+                    if (isVerNumDeclaration(line)) {
                         verNumLineNumber = lineNumber;
-                        if (line.contains("final")) {
-                            containsFinal = "Y";
-                        } else {
-                            containsFinal = "N";
-                        }
-                        String[] priKeys = {"private", "public", "protected"};
-                        for (String priKey : priKeys) {
-                            if (line.trim().startsWith(priKey)) {
-                                priStr = priKey;
-                                break;
+                        int start = line.indexOf("\"");
+                        if (start != -1) {
+                            // 从第一个双引号的下一个位置开始查找第二个双引号
+                            int end = line.indexOf("\"", start + 1);
+                            if (end != -1) {
+                                String startStr = line.substring(0, start + 1); // 包含第一个双引号
+                                String endStr = line.substring(end); // 包含第二个双引号
+                                verNumLine = startStr + "(XXXX)" + endStr;
                             }
                         }
                     } else if (matcher1.find()) {
@@ -368,16 +355,12 @@ public class ConfirmButtonListener implements ActionListener {
 
                     }
 
-                    if (((line.contains("String verNum ") || line.contains("String VERNUM ")) && ((line.trim().startsWith("private") && line.contains("private static"))
-                            || (line.trim().startsWith("public") && line.contains("public static"))
-                            || (line.trim().startsWith("protected") && line.contains("protected static"))))
-                            || line.contains("@Autowired") || (line.contains("define") && !line.contains("defined"))
-                            || ("3".equals(vType) && find)) {
+                    if (shouldBreakLoop(line, vType, find)) {
                         break;
                     }
                 }
 
-                if ("".equals(containsFinal) && "java".equalsIgnoreCase(extType)) {
+                if ("".equals(verNumLine) && "java".equalsIgnoreCase(extType)) {
                     resultObj.setMessage(MSG_NOSTRINGNUM);
                     resultObj.setFilePath(filePath);
                     resultObj.setOk(false);
@@ -542,9 +525,7 @@ public class ConfirmButtonListener implements ActionListener {
                 maxVersionNumAndLine.put("beforeMsg", beforeMsg);
                 maxVersionNumAndLine.put("versionNum", versionNum);
                 maxVersionNumAndLine.put("vType", vType);
-                maxVersionNumAndLine.put("containsFinal", containsFinal);
-                maxVersionNumAndLine.put("priStr", priStr);
-                maxVersionNumAndLine.put("verNum", verNum);
+                maxVersionNumAndLine.put("verNumLine", verNumLine);
             } catch (IOException e) {
                 if (logPrint) {
                     e.printStackTrace();
@@ -565,6 +546,40 @@ public class ConfirmButtonListener implements ActionListener {
         }
         resultObj.setOk(true);
         return resultObj;
+    }
+
+    /**
+     * 是否为verNum行
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2025/10/15
+     *
+     * @param line
+     * @return boolean
+     */
+    private static boolean isVerNumDeclaration(String line) {
+        boolean containsVerNum = line.contains("String verNum ") || line.contains("String VERNUM ") || line.contains("String VER_NUM ");
+        boolean hasValidModifier = (line.trim().startsWith("private") && line.contains("private static"))
+                || (line.trim().startsWith("public") && line.contains("public static"))
+                || (line.trim().startsWith("protected") && line.contains("protected static"));
+
+        return containsVerNum && hasValidModifier;
+    }
+
+    private static boolean shouldBreakLoop(String line, String vType, boolean find) {
+        // 检查是否是verNum声明行
+        if (isVerNumDeclaration(line)) {
+            return true;
+        }
+
+        // 检查其他终止条件
+        if (line.contains("@Autowired")
+                || (line.contains("define") && !line.contains("defined"))
+                || ("3".equals(vType) && find)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -685,10 +700,9 @@ public class ConfirmButtonListener implements ActionListener {
                 resultObj.setOk(false);
                 return resultObj;
             }
-            String priStr = maxVersionNumAndLine.get("priStr");
-            if ("java".equalsIgnoreCase(extType) && (priStr == null || priStr.length() <= 0)) {
-                // 权限符识别失败，请检查（protected/public/private）！
-                resultObj.setMessage(MSG_ADMIN_PRIERR);
+            String verNumLine = maxVersionNumAndLine.get("verNumLine");
+            if ("java".equalsIgnoreCase(extType) && (verNumLine == null || verNumLine.length() <= 0)) {
+                resultObj.setMessage(MSG_NOSTRINGNUM);
                 resultObj.setFilePath(filePath);
                 resultObj.setOk(false);
                 return resultObj;
@@ -721,11 +735,7 @@ public class ConfirmButtonListener implements ActionListener {
             String newLine = beforeMsg + msg + "," + taskType + "：" + taskNo;
             // 是否包含final
             String containsFinal = maxVersionNumAndLine.get("containsFinal");
-            String verNumNewLine = "";
-            String finalStr = "Y".equals(containsFinal) ? " final" : "";
-            String verNum = maxVersionNumAndLine.get("verNum");
-            verNum = verNum == null || "".equals(verNum) ? "verNum" : verNum;
-            verNumNewLine = "    " + priStr + " static" + finalStr + " String "+verNum+" = \"" + versionNum + "\";";
+            String verNumNewLine = maxVersionNumAndLine.get("verNumLine").replace("(XXXX)",versionNum);
 
             int totalLines = 0;
             try {
