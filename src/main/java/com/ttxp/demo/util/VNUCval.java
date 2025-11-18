@@ -184,6 +184,7 @@ public class VNUCval {
     public static final String MSG_200NOTES = "请输入修改描述！";
     public static final String MSG_200RORK = "请输入任务号！";
     public static final String MSG_CONFIRM = "注意！确认是否执行更新！！！";
+    public static final String MSG_PROJECTCONFIRM = "请检查修改描述中是否包含项目名称！！";
     public static final String MSG_CONFIRM_UPDATE = "已选择同步更新工程UpdateNotes.txt文件！";
     public static final String MSG_SUCCESS = "执行成功！!请检查！!";
     public static final String MSG_ALLDIRECTORY = "当前选中目录为文件夹！暂不支持！";
