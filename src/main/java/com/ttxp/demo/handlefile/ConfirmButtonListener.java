@@ -1,5 +1,8 @@
 package com.ttxp.demo.handlefile;
 
+import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationType;
+import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
@@ -76,17 +79,64 @@ public class ConfirmButtonListener implements ActionListener {
             Messages.showInfoMessage(MSG_200USERNAME, MSG_MESSGE);
             return;
         }
+
+        // 是否包含项目
+        ArrayList<String> resultProject = new ArrayList<String>();
         if (msg == null || msg.trim().length() == 0) {
             Messages.showInfoMessage(MSG_200NOTES, MSG_MESSGE);
             return;
+        }
+        msg = msg.trim();
+        if (F_TASKTYPE_R_L.equals(taskType)) {
+            // 正则表达式说明：
+            // 1. 【([^】]+)】：匹配中文方括号（左闭右闭），捕获括号内非】的内容
+            // 2. \\(([^)]+)\\)：匹配英文圆括号（左闭右闭），捕获括号内非)的内容（括号需转义）
+            // 3. （([^）]+)）：匹配中文圆括号（左闭右闭），捕获括号内非）的内容
+            // 4. |：逻辑或，匹配三种格式中的任意一种
+            Pattern BRACKET_PATTERN = Pattern.compile("【([^】]+)】|\\(([^)]+)\\)|（([^）]+)）");
+            Matcher matcher = BRACKET_PATTERN.matcher(msg);
+            int matchCount = 0;
+            // 限制最多匹配10次
+            while (matcher.find() && matchCount < 10) {
+                matchCount++;
+                String content = null;
+                // 依次检查三个捕获组（哪个有值取哪个）
+                for (int i = 1; i <= 3; i++) {
+                    if (matcher.group(i) != null) {
+                        content = matcher.group(i);
+                        break;
+                    }
+                }
+                // 过滤空内容或纯空格内容
+                if (content == null || content.trim().isEmpty()) {
+                    continue;
+                }
+                resultProject.add(content);
+            }
         }
         if (taskNo == null || taskNo.trim().length() == 0) {
             Messages.showInfoMessage(MSG_200RORK, MSG_MESSGE);
             return;
         }
 
+        // 消息
+        String message = MSG_CONFIRM;
+        if (F_TASKTYPE_R_L.equals(taskType)) {
+            message = MSG_PROJECTCONFIRM + "\n" + MSG_CONFIRM;
+        }
+        if (resultProject != null && resultProject.size() > 0) {
+            String htmlMessage = "<html>" +
+                    "<body>" +
+                    "<span style='color:red;'>" + resultProject + "</span>&nbsp;&nbsp;" + MSG_PROJECTCONFIRM +
+                    "<div style='text-align:center;'>" +
+                    "<br><b>" + MSG_CONFIRM + "</b>" +
+                    "</div>" +
+                    "</body>" +
+                    "</html>";
+            message = htmlMessage;
+        }
         // 显示表单对话框
-        int result = JOptionPane.showConfirmDialog(null, MSG_CONFIRM, "Confirmation", JOptionPane.OK_CANCEL_OPTION);
+        int result = JOptionPane.showConfirmDialog(null, message, "Confirmation", JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
             // 用户点击了确认按钮，执行实际的操作
             Project project = e.getProject();
@@ -116,6 +166,7 @@ public class ConfirmButtonListener implements ActionListener {
                 AtomicBoolean hasErr = new AtomicBoolean(false);
                 AtomicInteger failFileNum = new AtomicInteger();
                 AtomicInteger successFileNum = new AtomicInteger();
+                String finalMsg = msg;
                 Arrays.stream(files).forEach(file -> {
                     String path = file.getPath();
                     if (file.isDirectory()) {
@@ -134,7 +185,7 @@ public class ConfirmButtonListener implements ActionListener {
                         failFileNum.set(failFileNum.get() + 1);
                         return;
                     }
-                    ResultObj resultObj1 = insertNewVersionByNewFile(path, maxVersionNumAndLine, msg, taskNo, taskType);
+                    ResultObj resultObj1 = insertNewVersionByNewFile(path, maxVersionNumAndLine, finalMsg, taskNo, taskType);
                     if (!resultObj1.isOk()) {
                         hasErr.set(true);
                         resultList.add(resultObj1);
@@ -735,7 +786,7 @@ public class ConfirmButtonListener implements ActionListener {
             String newLine = beforeMsg + msg + "," + taskType + "：" + taskNo;
             // 是否包含final
             String containsFinal = maxVersionNumAndLine.get("containsFinal");
-            String verNumNewLine = maxVersionNumAndLine.get("verNumLine").replace("(XXXX)",versionNum);
+            String verNumNewLine = maxVersionNumAndLine.get("verNumLine").replace("(XXXX)", versionNum);
 
             int totalLines = 0;
             try {

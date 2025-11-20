@@ -248,11 +248,11 @@ public class VNUGUI {
                         Desktop.getDesktop().browse(uri);
                     }
                 } catch (URISyntaxException ex) {
-                    if(logPrint) {
+                    if (logPrint) {
                         ex.printStackTrace();
                     }
                 } catch (IOException ex) {
-                    if(logPrint) {
+                    if (logPrint) {
                         ex.printStackTrace();
                     }
                 }
@@ -441,7 +441,6 @@ public class VNUGUI {
             @Override
             public void focusLost(FocusEvent e2) {
                 // 当 JTextField 失去焦点时触发
-                // 这里可以添加你自己的逻辑，比如验证输入内容
                 String text = textField1.getText();
                 boolean success = false;
                 if (text != null && !text.isEmpty()) {
@@ -635,9 +634,10 @@ public class VNUGUI {
         StringBuffer filesDirs = new StringBuffer();
         AtomicInteger fileNum = new AtomicInteger();
         // 统计文件和目录数量
-        Stream.of(files).forEach(file -> {
-            fileNum.incrementAndGet();
-        });
+        Stream.of(files).filter(file -> !file.isDirectory())
+                .forEach(file -> {
+                    fileNum.incrementAndGet();
+                });
 
         filesDirs.append(F_FILESNUM_K_L + files.length + "," + F_FILE_K_L + fileNum.get() + "\n");
 
