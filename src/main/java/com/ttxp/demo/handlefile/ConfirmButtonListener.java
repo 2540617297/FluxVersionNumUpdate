@@ -88,14 +88,27 @@ public class ConfirmButtonListener implements ActionListener {
         }
         msg = msg.trim();
         if (F_TASKTYPE_R_L.equals(taskType)) {
-            Pattern BRACKET_START_PATTERN = Pattern.compile("【([^】]+)】");
-            Matcher matcher = BRACKET_START_PATTERN.matcher(msg);
+            // 正则表达式说明：
+            // 1. 【([^】]+)】：匹配中文方括号（左闭右闭），捕获括号内非】的内容
+            // 2. \\(([^)]+)\\)：匹配英文圆括号（左闭右闭），捕获括号内非)的内容（括号需转义）
+            // 3. （([^）]+)）：匹配中文圆括号（左闭右闭），捕获括号内非）的内容
+            // 4. |：逻辑或，匹配三种格式中的任意一种
+            Pattern BRACKET_PATTERN = Pattern.compile("【([^】]+)】|\\(([^)]+)\\)|（([^）]+)）");
+            Matcher matcher = BRACKET_PATTERN.matcher(msg);
             int matchCount = 0;
             // 限制最多匹配10次
             while (matcher.find() && matchCount < 10) {
                 matchCount++;
-                String content = matcher.group(1);
-                if (content == null || content.trim().length() == 0) {
+                String content = null;
+                // 依次检查三个捕获组（哪个有值取哪个）
+                for (int i = 1; i <= 3; i++) {
+                    if (matcher.group(i) != null) {
+                        content = matcher.group(i);
+                        break;
+                    }
+                }
+                // 过滤空内容或纯空格内容
+                if (content == null || content.trim().isEmpty()) {
                     continue;
                 }
                 resultProject.add(content);
