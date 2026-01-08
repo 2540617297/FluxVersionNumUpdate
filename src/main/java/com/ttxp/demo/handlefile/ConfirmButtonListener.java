@@ -1,8 +1,5 @@
 package com.ttxp.demo.handlefile;
 
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationType;
-import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
@@ -801,9 +798,13 @@ public class ConfirmButtonListener implements ActionListener {
                 return resultObj;
             }
 
+            String systemTempDir = System.getProperty("java.io.tmpdir");
+            String tempFileName = "temp_file.txt";
+            File tempFile = new File(systemTempDir, tempFileName);
+
             try (InputStreamReader isr = new InputStreamReader(new FileInputStream(filePath), StandardCharsets.UTF_8);
                  BufferedReader reader = new BufferedReader(isr);
-                 OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream("temp_file.txt"), StandardCharsets.UTF_8);
+                 OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream(tempFile), StandardCharsets.UTF_8);
                  BufferedWriter writer = new BufferedWriter(osw)) {
 
                 int lineCount = 0;
@@ -831,20 +832,20 @@ public class ConfirmButtonListener implements ActionListener {
                 }
                 resultObj.setOk(false);
                 resultObj.setFilePath(filePath);
-                resultObj.setMessage(e.getMessage());
+                resultObj.setMessage("EDT FILE ERR:" + e.getMessage());
                 return resultObj;
             }
 
             // 将临时文件重命名为原文件，覆盖原文件
             try {
-                renameFile("temp_file.txt", filePath);
+                renameFile(tempFile.getAbsolutePath(), filePath);
             } catch (IOException e) {
                 if (logPrint) {
                     e.printStackTrace();
                 }
                 resultObj.setOk(false);
                 resultObj.setFilePath(filePath);
-                resultObj.setMessage(e.getMessage());
+                resultObj.setMessage("MOVE FILE ERR:" + e.getMessage());
                 return resultObj;
             }
         } catch (Exception e) {
