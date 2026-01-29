@@ -7,10 +7,12 @@ import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.roots.ModuleRootModel;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.LocalFileSystem;
+import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.ttxp.demo.handlefile.ConfirmButtonListener;
 import com.ttxp.demo.util.MyPluginCacheManager;
 import com.ttxp.demo.util.ResultObj;
+import com.ttxp.demo.util.VNUCval;
 
 import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;
@@ -32,6 +34,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import static com.ttxp.demo.handlefile.ConfirmButtonListener.getMaxVersionNum;
+import static com.ttxp.demo.handlefile.ConfirmButtonListener.insertNewVersionByNewFile;
 import static com.ttxp.demo.util.VNUCval.*;
 
 /**
@@ -94,6 +98,8 @@ public class VNUGUI {
         // 文件分类-识别UpdateNotes文件
         IdentificationModule(e, files);
         indexUpdateNotes();
+        // vue工程查找updateNotes
+        searchUpdateNotes(e);
         // 二级框
         frame = new JFrame(F_TITLE_K_L);
         frame.setSize(800, 300);
@@ -211,6 +217,96 @@ public class VNUGUI {
                 }
             }
         }
+    }
+
+    /**
+     * vue工程查找updateNotes
+     *
+     * <p>Author: pengtai
+     * <p>Create Time:2026/1/29
+     *
+     * @param e
+     *
+     */
+    public void searchUpdateNotes(AnActionEvent e) {
+        try {
+            // 判断是否需要同步更新updateNotes
+            HashSet<String> directorys = new HashSet<>();
+            for (VirtualFile orgFile : orgFiles) {
+                String filePath = orgFile.getPath();
+                if (filePath == null || filePath.length() <= 0) {
+                    continue;
+                }
+                // 获取文件扩展名
+                boolean contains = orgFile.getName().contains(".");
+                if (!contains) {
+                    continue;
+                }
+                String extType = orgFile.getName().substring(orgFile.getName().lastIndexOf(".") + 1);
+                if (!"ts".equalsIgnoreCase(extType) && !"vue".equalsIgnoreCase(extType)) {
+                    continue;
+                }
+                if (filePath != null && filePath.length() > 0) {
+                    String[] pattern = {"/src"};
+                    String projectPath = "";
+                    for (String s : pattern) {
+                        int i = filePath.indexOf(s);
+                        if (i != -1) {
+                            projectPath = filePath.substring(0, i);
+                        }
+                    }
+                    if (projectPath != null && projectPath.length() > 0) {
+                        directorys.add(projectPath + "/src/UpdateNotes.txt");
+                    }
+                }
+            }
+
+            if (directorys == null || directorys.size() <= 0) {
+                return;
+            }
+
+            // 获取本地文件系统实例
+            LocalFileSystem localFileSystem = LocalFileSystem.getInstance();
+
+            VirtualFile[] flattenedFiles = getFlattenedFiles();
+            for (String dictory : directorys) {
+                boolean exist = false;
+                for (VirtualFile flattenedFile : flattenedFiles) {
+                    String path = flattenedFile.getPath();
+                    if (dictory.equalsIgnoreCase(path)) {
+                        exist = true;
+                        break;
+                    }
+                }
+
+                if (exist) {
+                    continue;
+                }
+
+                VirtualFile virtualFile = localFileSystem.findFileByPath(dictory);
+                // 如果虚拟文件存在，则添加到虚拟文件列表中
+                if (virtualFile != null) {
+                    Module module = ModuleUtilCore.findModuleForFile(virtualFile, e.getProject());
+                    if (module != null) {
+                        // 如果模块映射中已包含该模块，则添加虚拟文件到对应模块的列表中
+                        if (moduleMap.containsKey(module)) {
+                            moduleMap.get(module).add(virtualFile);
+                        } else {
+                            // 否则，创建新的文件列表，添加虚拟文件，并放入模块映射中
+                            ArrayList<VirtualFile> changes1 = new ArrayList<>();
+                            changes1.add(virtualFile);
+                            moduleMap.put(module, changes1);
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            if (VNUCval.logPrint) {
+                ex.printStackTrace();
+            }
+            printLog("VUE工程获取updateNotes文件错误！");
+        }
+
     }
 
     /**
