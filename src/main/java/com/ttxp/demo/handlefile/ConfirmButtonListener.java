@@ -1,8 +1,5 @@
 package com.ttxp.demo.handlefile;
 
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationType;
-import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
@@ -215,75 +212,6 @@ public class ConfirmButtonListener implements ActionListener {
                     }
                 }
 
-                // 判断是否需要同步更新updateNotes
-                /*if (vnugui.updateItem.isSelected()) {
-                    HashSet<String> directorys = new HashSet<>();
-                    for (ResultObj resultObj : resultList) {
-                        if (resultObj.isOk()) {
-                            String filePath = resultObj.getFilePath();
-                            if (filePath != null && filePath.length() > 0) {
-                                String[] pattern = {"/src/main/webapp/", "/src/main/resources/", "/src/main/java/"};
-                                String projectPath = "";
-                                for (String s : pattern) {
-                                    int i = filePath.indexOf(s);
-                                    if (i != -1) {
-                                        projectPath = filePath.substring(0, i);
-                                    }
-                                }
-                                if (projectPath != null && projectPath.length() > 0) {
-                                    directorys.add(projectPath + "/src/main/resources/updatenotes/UpdateNotes.txt");
-                                }
-                            }
-
-                        }
-                    }
-                    printLog("search updateNotes dictory:" + directorys.toString());
-                    printLog("updateNotes dictory:" + containsUpdateNotes.toString());
-
-                    // 去重
-                    HashSet<String> distinctDirectorys = new HashSet<>();
-                    for (String dictory : directorys) {
-                        boolean contains = false;
-                        for (String containsUpdateNote : containsUpdateNotes) {
-                            if (containsUpdateNote.equals(dictory)) {
-                                contains = true;
-                                break;
-                            }
-                        }
-                        if (!contains) {
-                            distinctDirectorys.add(dictory);
-                        }
-                    }
-                    printLog("distinct updateNotes dictory:" + distinctDirectorys.toString());
-
-                    // 更新UpdateNotes
-                    for (String filePath : distinctDirectorys) {
-                        Map<String, String> maxVersionNumAndLine = new HashMap<>();
-                        ResultObj resultObj = getMaxVersionNum(filePath, userName, maxVersionNumAndLine);
-                        if (!resultObj.isOk()) {
-                            hasErr.set(true);
-                            resultList.add(resultObj);
-                            failFileNum.set(failFileNum.get() + 1);
-                            continue;
-                        }
-                        ResultObj resultObj1 = insertNewVersionByNewFile(filePath, maxVersionNumAndLine, msg, taskNo, taskType);
-                        if (!resultObj1.isOk()) {
-                            hasErr.set(true);
-                            resultList.add(resultObj1);
-                            failFileNum.set(failFileNum.get() + 1);
-                            continue;
-                        } else {
-                            resultList.add(resultObj1);
-                            successFileNum.set(successFileNum.get() + 1);
-                            VirtualFile virtualFile = VfsUtil.findFileByIoFile(new File(filePath), true);
-                            if (virtualFile != null) {
-                                virtualFile.refresh(false, false);
-                            }
-                        }
-                    }
-
-                }*/
-
                 // 判断是否有报错返回展示对应信息
                 if (hasErr.get()) {
                     vnugui.showMessageDialog(e, resultList, successFileNum.get(), failFileNum.get());
@@ -319,7 +247,10 @@ public class ConfirmButtonListener implements ActionListener {
             int dotIndex = fileName.lastIndexOf('.');
             if (dotIndex > 0 && dotIndex < fileName.length() - 1) {
                 extType = fileName.substring(dotIndex + 1);
-                if (!"java".equalsIgnoreCase(extType) && !"js".equalsIgnoreCase(extType) && !("txt".equalsIgnoreCase(extType) && "UpdateNotes.txt".equalsIgnoreCase(fileName))) {
+                if (!"java".equalsIgnoreCase(extType) && !"js".equalsIgnoreCase(extType)
+                        && !"ts".equalsIgnoreCase(extType)
+                        && !"vue".equalsIgnoreCase(extType)
+                        && !("txt".equalsIgnoreCase(extType) && "UpdateNotes.txt".equalsIgnoreCase(fileName))) {
                     printLog("无效的文件：" + filePath);
                     resultObj.setMessage(MSG_208NOTSUPPORT);
                     resultObj.setFilePath(filePath);
@@ -801,9 +732,13 @@ public class ConfirmButtonListener implements ActionListener {
                 return resultObj;
             }
 
+            String systemTempDir = System.getProperty("java.io.tmpdir");
+            String tempFileName = "temp_file.txt";
+            File tempFile = new File(systemTempDir, tempFileName);
+
             try (InputStreamReader isr = new InputStreamReader(new FileInputStream(filePath), StandardCharsets.UTF_8);
                  BufferedReader reader = new BufferedReader(isr);
-                 OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream("temp_file.txt"), StandardCharsets.UTF_8);
+                 OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream(tempFile), StandardCharsets.UTF_8);
                  BufferedWriter writer = new BufferedWriter(osw)) {
 
                 int lineCount = 0;
@@ -816,7 +751,8 @@ public class ConfirmButtonListener implements ActionListener {
                     if ("java".equalsIgnoreCase(extType) && lineCount == targetVerNumLineNumber) {
                         writer.write(verNumNewLine + enterLine);
                     } else {
-                        if ("JS".equalsIgnoreCase(extType) && lineCount == totalLines) {
+                        if (("JS".equalsIgnoreCase(extType) || "ts".equalsIgnoreCase(extType) || "vue".equalsIgnoreCase(extType))
+                                && lineCount == totalLines) {
                             writer.write(currentLine);
                         } else {
                             writer.write(currentLine + enterLine);
@@ -831,20 +767,20 @@ public class ConfirmButtonListener implements ActionListener {
                 }
                 resultObj.setOk(false);
                 resultObj.setFilePath(filePath);
-                resultObj.setMessage(e.getMessage());
+                resultObj.setMessage("EDT FILE ERR:" + e.getMessage());
                 return resultObj;
             }
 
             // 将临时文件重命名为原文件，覆盖原文件
             try {
-                renameFile("temp_file.txt", filePath);
+                renameFile(tempFile.getAbsolutePath(), filePath);
             } catch (IOException e) {
                 if (logPrint) {
                     e.printStackTrace();
                 }
                 resultObj.setOk(false);
                 resultObj.setFilePath(filePath);
-                resultObj.setMessage(e.getMessage());
+                resultObj.setMessage("MOVE FILE ERR:" + e.getMessage());
                 return resultObj;
             }
         } catch (Exception e) {
