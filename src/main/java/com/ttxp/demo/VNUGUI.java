@@ -132,6 +132,10 @@ public class VNUGUI {
 
         // 获取缓存管理器实例
         restoreDataFromCache();
+        // 无缓存时 restoreDataFromCache 不会调用 setDescription()，「修改文件」列表会一直空白
+        if (descriptionArea.getText() == null || descriptionArea.getText().trim().isEmpty()) {
+            setDescription();
+        }
 
         frame.setVisible(true);
     }

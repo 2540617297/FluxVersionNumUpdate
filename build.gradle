@@ -1,10 +1,10 @@
 plugins {
     id("java")
-    id("org.jetbrains.intellij") version "1.17.3"
+    id("org.jetbrains.intellij.platform") version "2.13.1"
 }
 
 group = "com.ttxp"
-version = "2.3.1.4-SNAPSHOT"
+version = "3.3.1.4-SNAPSHOT"
 
 repositories {
     maven {
@@ -14,15 +14,24 @@ repositories {
         url 'https://maven.aliyun.com/repository/central'
     }
     mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
 }
 
-// Configure Gradle IntelliJ Plugin
-// Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
-intellij {
-    version.set("2024.3.1")
-    type.set("IC") // Target IDE Platform
+dependencies {
+    intellijPlatform {
+        intellijIdea('2026.1')
+    }
+}
 
-//    plugins.set(listOf(/* Plugin Dependencies */))
+intellijPlatform {
+    pluginConfiguration {
+        ideaVersion {
+            sinceBuild = '261.0'
+            untilBuild = provider { null }
+        }
+    }
 }
 
 tasks.withType(JavaCompile) {
@@ -34,14 +43,6 @@ tasks.withType(Jar) {
 }
 
 tasks {
-    // Set the JVM compatibility versions
-
-    patchPluginXml {
-        sinceBuild.set("242.0")
-        untilBuild.set("")
-//        untilBuild.set("243.*")
-    }
-
     signPlugin {
         certificateChain.set(System.getenv("CERTIFICATE_CHAIN"))
         privateKey.set(System.getenv("PRIVATE_KEY"))

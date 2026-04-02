@@ -1,6 +1,7 @@
 package com.ttxp.demo.handlefile;
 
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -192,7 +193,14 @@ public class ConfirmButtonListener implements ActionListener {
                         resultList.add(resultObj1);
                         successFileNum.set(successFileNum.get() + 1);
                     }
-                    file.refresh(false, false);
+                    // VFS refresh 需持有写锁（Write Action），不能仅在 EDT 上裸调 refresh
+                    try {
+                        WriteAction.run(() -> file.refresh(false, false));
+                    } catch (Throwable t) {
+                        if (logPrint) {
+                            t.printStackTrace();
+                        }
+                    }
                 });
 
 
